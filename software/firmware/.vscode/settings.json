@@ -1,0 +1,40 @@
+{
+  "C_Cpp.clang_format_style": "Visual Studio",
+  "editor.formatOnSave": false,
+  "[cpp]": {
+    "editor.quickSuggestions": true
+  },
+  "[c]": {
+    "editor.quickSuggestions": true
+  },
+  "C_Cpp.intelliSenseEngineFallback": "Enabled",
+  "files.associations": {
+    "*.inc": "c",
+    "*.tcc": "cpp",
+    "complex": "cpp",
+    "optional": "cpp",
+    "random": "cpp",
+    "future": "cpp",
+    "istream": "cpp",
+    "limits": "cpp",
+    "streambuf": "cpp",
+    "*.ipp": "cpp",
+    "iomanip": "cpp",
+    "stdexcept": "cpp",
+    "typeinfo": "cpp",
+    "cmath": "cpp",
+    "iosfwd": "cpp",
+    "cstdio": "cpp",
+    "fstream": "cpp",
+    "deque": "c",
+    "list": "c",
+    "string": "c",
+    "unordered_map": "c",
+    "vector": "c",
+    "system_error": "c",
+    "array": "c",
+    "string_view": "c",
+    "initializer_list": "c",
+    "utility": "c"
+  }
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        {{ partial "head" . }}
+        <style>
+            .network{
+                margin:1em auto;
+                font-size: 1.2em;
+            }
+        </style>
+    </head>
+    <body>
+        {{ partial "provnavbar" . }}
+        <main>
+            <div class="intro">
+                <h1>{{ .Title }}</h1>
+            </div>
+            <div class="network" id="network"></div>
+            <div class="network" id="ip"></div>
+            <button onclick="location.href='/provfinished';">
+                Finish Setup
+            </button>
+        </main>
+        {{ partial "footer" . }}
+    </body>
+</html>
+<script>
+    const http = new XMLHttpRequest();
+    const url = 'connection.txt';
+    http.open("GET", url);
+    http.send();
+
+    http.onreadystatechange = function() {
+        if (http.readyState == 4 && http.status == 200){
+            var response = http.responseText.split(/\n/);
+            console.log(response);
+            var network_div = document.getElementById("network");
+            var network_name = document.createTextNode('Network: ' + response[0]);
+            network_div.appendChild(network_name)
+
+            var ip_div = document.getElementById("ip");
+            var ip_address = document.createTextNode('IP: ' + response[1]);
+            ip_div.appendChild(ip_address)
+        }
+    }
+</script>
+

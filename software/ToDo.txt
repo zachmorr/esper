@@ -1,0 +1,51 @@
+TODO:
+Settings
+    URL for webserver
+    Change IP
+Debugging page
+    remaining memory
+        total and for each task
+    clear logs
+OTA Updates
+    Ability to update during provisioning?
+    progress bar
+    error catching
+Analytics
+    Total queries and total blocked queries
+    most blocked/queried websites
+DNS
+    better client handling
+        print error if client never got response
+    Reverse DNS support
+    Benchmark DNS response times
+    Benchmark copy by value vs copy by reference
+LEDs
+    LED Error Codes
+HTTP
+    show currently connected network & ip
+    show connected clients
+    Add log page select to homepage 
+    Add JSON support
+    Upload/download blacklist files
+BLACKLIST
+    Handling reload_blacklist() errors
+    Benchmark speed improvement from keeping blacklist in RAM instead of flash
+STORAGE
+    Handle flash errors
+    Document what is being held in flash
+OTHER
+    Document/Refactor Code
+    Prevent buffer overflows
+    Move away from strcpy, strcmp, etc
+
+Maybe Some Day:
+    DHCP support
+        Individual block lists for devices
+            User accounts??
+    DNS Over HTTPS (early tests dont look hopeful for ESP32, will likely need MPU)
+
+Known Bugs:
+    Have to reset device if network ssid/pass change
+    Text on website overflows on skinny screens
+    Auto joining bugs during configuration, regularly disconnects (on iphone)
+    black/whitelist buttons on homepage do not update after being added 

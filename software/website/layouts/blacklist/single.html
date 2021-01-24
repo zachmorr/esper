@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        {{ partial "head" . }}
+        <style>
+            table {
+                margin: 2rem auto;
+                table-layout: fixed;
+                border-collapse: collapse;
+                text-align: left;
+                width: 95%;
+                max-width: 45em;
+            }
+            tr:hover {
+                background-color: #ddd;
+            }
+            thead tr:nth-of-type(1):hover {
+                background-color: white;
+            }
+            th {
+                padding: 0.2em;
+                border: 1px solid #e7e7e7;
+            }
+            th#DeleteHeader {
+                width: 5rem;
+                text-align: center;
+            }
+            button {
+                width: 3rem;
+                font-size: 1.5rem;
+            }
+            button#submitbutton {
+                width: 5rem;
+                margin: 0.5rem auto;
+                /* font-weight: normal; */
+                font-size: 1rem;
+            }
+            td {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            td:nth-child(2) {
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        {{ partial "navbar" . }}
+        <main>
+            <div class="intro">
+                <h1>{{ .Title }}</h1>
+            </div>
+            <div class="addurl">
+                <div class='error' id='error'>
+                </div>
+                Add To Blacklist:
+                <br>
+                <input id="urlinput" type="text" autocorrect="off" autocapitalize="none" name='url' maxlength="255"/>
+                <button id="submitbutton" class="txtbtn">Submit</button>
+            </div>
+            <table class="table" id='table'>
+                <thead>
+                    <tr>
+                    <th id="DomainHeader">Domain</th>
+                    <th id="DeleteHeader">Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </main>
+        {{ partial "footer" . }}
+    </body>
+</html>
+<script>
+    window.onload = loadBlacklist();
+
+    function loadBlacklist() {
+        const http = new XMLHttpRequest();
+        http.open("GET", 'blacklist.txt');
+        http.send();
+
+        http.onreadystatechange = function() {
+            if (http.readyState == 4)
+            {
+                if (http.status == 200){
+                    var blacklist = http.responseText.split(/\n/);
+                    console.log(blacklist);
+                    let table = document.querySelector("table");
+                    generateTable(table, blacklist);
+                }
+            }
+        }
+    }
+
+    function generateTable(table, blacklist) {
+        let tb = document.getElementById('table').getElementsByTagName('tbody')[0];
+        while(tb.firstChild)
+        {
+            tb.removeChild(tb.firstChild);
+        }
+
+        for (let i = 0; i < blacklist.length; i++){
+            if (blacklist[i]) {
+                let row = tb.insertRow();
+                let domain = row.insertCell();
+                domain.innerHTML = blacklist[i];
+
+                let button = document.createElement('button');
+                // button.innerHTML = 'X';
+                // button.className = 'deleteButton';
+                button.innerHTML = '&times;';
+                button.onclick = function(){removeURL(blacklist[i])};
+
+                deleteDomain = row.insertCell();
+                deleteDomain.appendChild(button)
+            }
+        }
+    }
+
+    function sumbitURL(){
+        let req = new XMLHttpRequest();
+        req.open('POST', '/blacklist/add');
+        req.setRequestHeader('Content-Type','text/plain')
+        urlinput = document.getElementById('urlinput');
+        req.send(urlinput.value);
+        urlinput.value = "";
+
+        let err = document.getElementById('error');
+        err.style.visibility = 'hidden'
+        
+        req.onreadystatechange = function(){handleResponse(req)};
+    }
+
+    function removeURL(url){
+        let req = new XMLHttpRequest();
+        req.open('POST', '/blacklist/delete');
+        req.setRequestHeader('Content-Type','text/plain')
+        req.send(url)
+
+        let err = document.getElementById('error');
+        err.style.visibility = 'hidden'
+        
+        req.onreadystatechange = function(){handleResponse(req)};
+    }
+
+    function handleResponse(req){
+        if (req.readyState == 4)
+        {
+            if (req.status == 200)
+            {
+                loadBlacklist();
+            }
+            else
+            {
+                console.log("Error: " + req.responseText);
+                let err = document.getElementById('error');
+                err.innerHTML = req.responseText;
+                err.style.visibility = 'visible'
+            }
+        }
+    }
+</script>
+

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body {
+margin: 0;
+height: 100%;
+background-color: #7fffd4;
+text-align: center;
+font-family: Verdana, Geneva, Tahoma, sans-serif
+}
+
+.container {
+margin: auto;
+width: 95%;
+border-radius: 15px;
+box-shadow: 0px 0px 13px 10px rgba(0, 0, 0, 0.2);
+display: grid;
+grid-template-columns: 7em 1fr 1fr 1fr;
+grid-template-rows: auto auto auto auto;
+background-color: white;
+}
+
+.logo {
+grid-column: 1 / 2;
+grid-row: 1 / 2;
+border-radius: 15px 0 0 0;
+background-color: #36A2C9;
+}
+
+.logo img {
+margin: auto auto;
+width: 60%;
+height: auto;
+}
+
+.header {
+grid-column: 2 / 5;
+grid-row: 1 / 2;
+border-radius: 0 15px 0 0;
+background-color: #36A2C9;
+}
+
+.sidenav {
+grid-column: 1 / 2;
+grid-row: 2 / 4;
+min-width: 7em;
+background-color: #111;
+}
+
+.sidenav a {
+margin: 1em 0;
+text-decoration: none;
+font-size: 1.3em;
+color: #818181;
+display: block;
+}
+
+.sidenav a:hover {
+color: #f1f1f1;
+}
+</style>
+<style>
+.block{
+margin:1% 10% 1%;
+border-radius:5px;
+box-shadow:0 0px 7px 0 rgba(0,0,0,0.2);}
+.block#recentQueries{
+grid-column:2 / 5;
+grid-row:2 / 4;
+margin:1%;}
+.queryTable{
+margin:auto auto 5% auto;
+table-layout:fixed;
+width:80%;
+border-collapse:collapse;
+border:3px solid #818181;
+text-align:left;}
+.queryTable th{
+padding:0.2em;
+border:3px solid #818181;}
+.queryTable td{
+padding:0.2em;
+overflow: hidden;}
+.queryTable thead th:nth-child(1){
+width:15%;}
+.queryTable thead th:nth-child(2){
+width:60%;}
+.queryTable thead th:nth-child(3){
+width:15%;}
+.queryTable thead th:nth-child(4){
+width:10%;}
+.blockButton{
+border-radius: 5px;
+border: none;
+margin: auto;
+width:90%;
+font-size: 0.8em;
+font-weight: bold;
+background-color: #3c8dbc;}
+</style>
+<title>Log</title>
+</head>
+<body>
+<div class="container">
+<div class="logo">
+<img src="logo.png" alt="logo">
+</div>
+<div class="header">
+<h1>Esper</h1>
+</div>
+<div class="sidenav">
+<a href="homepage">Home</a>
+<a href="log">Log</a>
+<a href="blacklist">Blacklist</a>
+<a href="settings">Settings</a>
+</div>
+<div class="block" id="recentQueries">
+<h3>Recent Queries</h3>
+<table class="queryTable">
+</table>
+</div>
+</div>
+</body>
+</html>
+<script>
+function generateTable(table, log) {
+let thead = table.createTHead();
+let row = thead.insertRow();
+let tb = document.createElement('tbody');
+table.appendChild(tb);
+
+for (let i = 0; i < log.length; i++){
+if (i==0) {
+for (const header of log[i]) {
+let th = document.createElement("th");
+let text = document.createTextNode(header);
+th.appendChild(text);
+row.appendChild(th);
+}
+} else {
+let row = tb.insertRow();
+row.insertCell().innerHTML = log[i][0];
+row.insertCell().innerHTML = log[i][1];
+row.insertCell().innerHTML = log[i][2];
+
+let form = document.createElement("form");
+form.method = "post";
+
+let button = document.createElement("button");
+button.type = 'submit';
+button.name = 'url';
+button.value = log[i][1];
+button.className = 'blockButton';
+button.formenctype = 'text/plain';
+form.appendChild(button);
+
+let blocked = log[i][3];
+if (blocked == '1'){
+row.style.color = "#FF0000";
+form.action = "whitelist/add";
+let text = document.createTextNode("Whitelist");
+button.appendChild(text);
+}
+else{
+form.action = "blacklist/add";
+let text = document.createTextNode("Block");
+button.appendChild(text);
+}
+row.insertCell().appendChild(form);
+}
+}
+}
+
+const http = new XMLHttpRequest();
+const url = 'log.csv';
+http.open("GET", url);
+http.send();
+
+http.onreadystatechange = function() {
+if (http.readyState == 4 && http.status == 200){
+var response = http.responseText.split(/\n/);
+log = [];
+for (var i = 0; i < response.length; i++){
+if (response[i]) {
+log.push(response[i].split(','));
+}
+
+}
+console.log(log);
+let table = document.querySelector("table");
+generateTable(table, log);
+}
+}
+</script>
