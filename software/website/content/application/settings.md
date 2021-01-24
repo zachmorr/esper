@@ -1,5 +1,5 @@
 ---
 title: "Settings"
-type: provsettings
+layout: settings
 draft: false
 ---

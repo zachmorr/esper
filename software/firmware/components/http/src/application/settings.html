@@ -89,7 +89,7 @@ margin: auto auto 1rem auto;
 padding-left: 1rem;
 padding-right: 1rem;
 }
-.settings {
+form {
 margin: 2rem auto;
 width: 30rem;
 max-width: 100%;
@@ -161,8 +161,8 @@ max-width: 40rem;
 <h1>Settings</h1>
 </div>
 <div>
-<button id="blockStatus" onclick=toggleBlockingStatus()>Blocking On</button><br>
-<div class="settings">
+<button id="blockStatus" onclick=toggleBlocking()>Blocking On</button><br>
+<form>
 <div class="setting" >
 <label for="ip">Device IP</label>
 <input disabled=true name="ip" type="text" autocorrect="off" autocapitalize="none"/>
@@ -187,7 +187,7 @@ max-width: 40rem;
 <div>
 <button class="txtbtn">Submit</button>
 </div>
-</div>
+</form>
 <div>
 <button class="txtbtn" onclick='updateFirmware()'>Update Firmware</button>
 </div>
@@ -214,7 +214,7 @@ getCurrentServer();
 getBlockingStatus();
 } 
 
-function updateFirmware(){
+function upgradeFirmware(){
 let http = new XMLHttpRequest();
 
 http.open("POST", 'updatefirmware');
@@ -226,18 +226,18 @@ http.onreadystatechange = function() {
 if (http.readyState == 4 && http.status == 200){
 let modal = document.getElementById('modal')
 modal.style.display = 'block';
-interval_handle = setInterval(checkupdateStatus, 2000);
+interval_handle = setInterval(checkUpgradeStatus, 2000);
 }
 else{
-// button.disbled = false;
+button.disbled = false;
 }
 }
 }
 
-function checkupdateStatus(){
+function checkUpgradeStatus(){
 console.log("Checking status...")
 let http = new XMLHttpRequest();
-let url = 'updatestatus';
+let url = 'upgradestatus';
 http.open("GET", url);
 http.send();
 
@@ -265,7 +265,7 @@ http.send();
 
 http.onreadystatechange = function() {
 if (http.readyState == 4) {
-let button = document.getElementById("blockStatus");
+let button = document.getElementById("blockingbutton");
 if (http.status == 200){
 console.log(http.responseText);
 if(http.responseText == 'blocking on')
@@ -307,14 +307,14 @@ if (http.readyState == 4) {
 if (http.status == 200){
 console.log(http.responseText);
 let server = http.responseText;
-let dnssrv_select = document.getElementById('dnssrv');
-let options = dnssrv_select.options;
+let server_select = document.getElementById('server');
+let options = server_select.options;
 
 for(let j = 0; j < options.length; j++)
 {
 if (options[j].value == server)
 {
-dnssrv_select.selectedIndex = j;
+server_select.selectedIndex = j;
 }
 }
 }

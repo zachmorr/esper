@@ -1,5 +1,5 @@
 ---
 title: "Blacklist"
-type: blacklist
+layout: blacklist
 draft: false
 ---

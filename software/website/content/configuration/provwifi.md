@@ -1,5 +1,5 @@
 ---
 title: "Select Wifi"
-type: provwifi
+layout: provwifi
 draft: false
 ---

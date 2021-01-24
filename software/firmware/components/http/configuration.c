@@ -69,10 +69,10 @@ static esp_err_t select_wifi_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Request for /");
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
 
-    extern const unsigned char  selectWifi_html_start[] asm("_binary_selectwifi_html_start");
-    extern const unsigned char  selectWifi_html_end[]   asm("_binary_selectwifi_html_end");
-    const size_t  selectWifi_html_size = (selectWifi_html_end -  selectWifi_html_start);
-    httpd_resp_send_chunk(req, (const char *)selectWifi_html_start, selectWifi_html_size);
+    extern const unsigned char  provwifi_html_start[] asm("_binary_provwifi_html_start");
+    extern const unsigned char  provwifi_html_end[]   asm("_binary_provwifi_html_end");
+    const size_t  provwifi_html_size = (provwifi_html_end -  provwifi_html_start);
+    httpd_resp_send_chunk(req, (const char *)provwifi_html_start, provwifi_html_size);
     httpd_resp_sendstr_chunk(req, NULL);
 
     return ESP_OK;
@@ -175,10 +175,10 @@ static esp_err_t connected_get_handler(httpd_req_t *req)
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
 
-    extern const unsigned char  connected_html_start[] asm("_binary_connected_html_start");
-    extern const unsigned char  connected_html_end[]   asm("_binary_connected_html_end");
-    const size_t  connected_html_size = (connected_html_end -  connected_html_start);
-    httpd_resp_send_chunk(req, (const char *)connected_html_start, connected_html_size);
+    extern const unsigned char  provsettings_html_start[] asm("_binary_provsettings_html_start");
+    extern const unsigned char  provsettings_html_end[]   asm("_binary_provsettings_html_end");
+    const size_t  provsettings_html_size = (provsettings_html_end -  provsettings_html_start);
+    httpd_resp_send_chunk(req, (const char *)provsettings_html_start, provsettings_html_size);
     httpd_resp_sendstr_chunk(req, NULL);
 
     return ESP_OK;
@@ -200,10 +200,10 @@ static esp_err_t finished_get_handler(httpd_req_t *req)
     ESP_ERROR_CHECK(finish_configuration());
 
     httpd_resp_set_type(req, "text/html");
-    extern const unsigned char  finished_html_start[] asm("_binary_finished_html_start");
-    extern const unsigned char  finished_html_end[]   asm("_binary_finished_html_end");
-    const size_t  finished_html_size = (finished_html_end -  finished_html_start);
-    httpd_resp_send(req, (const char *)finished_html_start,  finished_html_size);
+    extern const unsigned char  provfinished_html_start[] asm("_binary_provfinished_html_start");
+    extern const unsigned char  provfinished_html_end[]   asm("_binary_provfinished_html_end");
+    const size_t  provfinished_html_size = (provfinished_html_end -  provfinished_html_start);
+    httpd_resp_send(req, (const char *)provfinished_html_start,  provfinished_html_size);
 
     xTaskCreatePinnedToCore(restart, "restarting", 8000, NULL, 5, 
                             NULL, tskNO_AFFINITY);

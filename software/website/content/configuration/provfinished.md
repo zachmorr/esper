@@ -1,5 +1,5 @@
 ---
 title: "Finished!"
-type: provfinished
+layout: provfinished
 draft: false
 ---

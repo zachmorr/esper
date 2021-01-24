@@ -173,10 +173,10 @@ static esp_err_t homepage_get_handler(httpd_req_t *req)
     long start = esp_timer_get_time();
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
-    extern const unsigned char  homepage_html_start[] asm("_binary_homepage_html_start");
-    extern const unsigned char  homepage_html_end[]   asm("_binary_homepage_html_end");
-    const size_t  homepage_html_size = (homepage_html_end -  homepage_html_start);
-    httpd_resp_send(req, (const char *)homepage_html_start,  homepage_html_size);
+    extern const unsigned char  home_html_start[] asm("_binary_home_html_start");
+    extern const unsigned char  home_html_end[]   asm("_binary_home_html_end");
+    const size_t  home_html_size = (home_html_end -  home_html_start);
+    httpd_resp_send(req, (const char *)home_html_start,  home_html_size);
     ESP_LOGD(TAG, "Homepage.html processing Time: %lld ms", (esp_timer_get_time()-start)/1000);
 
     return ESP_OK;
