@@ -1,7 +1,10 @@
 TODO:
 Settings
+    show current firmware version
+    show if there is any available updates
     URL for webserver
     Change IP
+    change update server
 Debugging page
     remaining memory
         total and for each task
@@ -21,7 +24,7 @@ DNS
     Benchmark copy by value vs copy by reference
 LEDs
     LED Error Codes
-HTTP
+WEBSITE
     show currently connected network & ip
     show connected clients
     Add log page select to homepage 

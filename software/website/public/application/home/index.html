@@ -128,6 +128,7 @@
                 color: red;
             }
             .error {
+                visibility: hidden;
                 color: red;
             }
             @media only screen and (max-width: 480px) {
@@ -195,14 +196,14 @@
                 <h3>Recent Queries</h3>
                 <div class='size'>
                     <label class='sizelabel'>Entries per page</label>
-                    <select id='sizeselect'>
+                    <select id='sizeselect' onchange="refreshTable()">
                         <option value='10'>10</option>
                         <option value='20'>20</option>
                         <option value='50'>50</option>
                         <option value='100'>100</option>
                     </select>
                 </div>
-                <div class='error'>
+                <div class='error' id='error'>
                     Error
                 </div>
                 <table>
@@ -220,7 +221,7 @@
             </div>
         </main>
         <footer>
-    <p class="copyright text-muted">© All rights reserved.</p>
+    <p></p>
 </footer>
     </body>
 </html>
@@ -262,47 +263,31 @@
    
 
     function generateTable(table, log) {
-        
-        
-        
-        
-        
 
-        let tb = document.getElementById('table').getElementsByTagName('tbody')[0];
+        let tb = document.getElementsByTagName('tbody')[0];
         while(tb.firstChild)
         {
             tb.removeChild(tb.firstChild);
         }
 
         for (let i = 0; i < log.length; i++){
-            if (i==0) {
-                let row = thead.insertRow();
-                for (const header of log[i]) {
-                    let th = document.createElement("th");
-                    let text = document.createTextNode(header);
-                    th.appendChild(text);
-                    row.appendChild(th);
-                }
-            } else {
+            if (i!=0) {
                 let row = tb.insertRow();
                 row.insertCell().innerHTML = log[i][0];
                 row.insertCell().innerHTML = log[i][1];
                 row.insertCell().innerHTML = log[i][2];
 
                 let button = document.createElement('button');
-                
 
                 let blocked = log[i][3];
                 if (blocked == '1'){
                     button.className = 'altbtn';
                     button.innerHTML = "&check;"
                     row.style.color = "#FF0000";
-                    
                     button.onclick = function(){sumbitURL("whitelist", log[i][1])};
                 }
                 else{
                     button.innerHTML = "&times;"
-                    
                     button.onclick = function(){sumbitURL("blacklist", log[i][1])};
                 }
 

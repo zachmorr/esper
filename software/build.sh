@@ -1,5 +1,5 @@
 #! /usr/bin/bash
 
+website/hugo/hugo -s website/
 python scripts/compress.py
-python scripts/reformat_blacklist.py
-idf.py -C firmware build
+idf.py -C firmware -p /dev/ttyUSB0 flash monitor

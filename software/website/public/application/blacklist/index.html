@@ -82,6 +82,9 @@
     }
 </style>
         <style>
+            .error {
+                color: red;
+            }
             table {
                 margin: 2rem auto;
                 table-layout: fixed;
@@ -145,7 +148,7 @@
                 Add To Blacklist:
                 <br>
                 <input id="urlinput" type="text" autocorrect="off" autocapitalize="none" name='url' maxlength="255"/>
-                <button id="submitbutton" class="txtbtn">Submit</button>
+                <button id="submitbutton" class="txtbtn" onclick=sumbitURL()>Submit</button>
             </div>
             <table class="table" id='table'>
                 <thead>
@@ -159,7 +162,7 @@
             </table>
         </main>
         <footer>
-    <p class="copyright text-muted">© All rights reserved.</p>
+    <p></p>
 </footer>
     </body>
 </html>
@@ -185,7 +188,7 @@
     }
 
     function generateTable(table, blacklist) {
-        let tb = document.getElementById('table').getElementsByTagName('tbody')[0];
+        let tb = document.getElementsByTagName('tbody')[0];
         while(tb.firstChild)
         {
             tb.removeChild(tb.firstChild);
@@ -198,8 +201,6 @@
                 domain.innerHTML = blacklist[i];
 
                 let button = document.createElement('button');
-                
-                
                 button.innerHTML = '&times;';
                 button.onclick = function(){removeURL(blacklist[i])};
 

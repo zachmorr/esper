@@ -3,22 +3,19 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>http://example.org/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>http://example.org/application/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>http://example.org/configuration/</loc>
-    <priority>0</priority>
   </url>
   
   <url>
     <loc>http://example.org/application/blacklist/</loc>
+  </url>
+  
+  <url>
+    <loc>http://example.org/configuration/</loc>
+  </url>
+  
+  <url>
+    <loc>http://example.org/</loc>
   </url>
   
   <url>

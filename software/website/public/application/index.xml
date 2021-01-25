@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Esper</title>
+    <title>Applications on Esper</title>
     <link>http://example.org/application/</link>
-    <description>Recent content on Esper</description>
+    <description>Recent content in Applications on Esper</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language><atom:link href="http://example.org/application/index.xml" rel="self" type="application/rss+xml" />
     <item>

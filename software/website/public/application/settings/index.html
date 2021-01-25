@@ -161,7 +161,7 @@
                 <h1>Settings</h1>
             </div>
             <div>
-                <button id="blockStatus" onclick=toggleBlocking()>Blocking On</button><br>
+                <button id="blockStatus" onclick=toggleBlockingStatus()>Blocking On</button><br>
                 <form>
                     <div class="setting" >
                         <label for="ip">Device IP</label>
@@ -202,11 +202,10 @@
             </div>
         </main>
         <footer>
-    <p class="copyright text-muted">© All rights reserved.</p>
+    <p></p>
 </footer>
     </body>
 </html>
-
 <script>
     var interval_handle
     window.onload = function(){
@@ -216,12 +215,9 @@
 
     function upgradeFirmware(){
         let http = new XMLHttpRequest();
-        
         http.open("POST", 'updatefirmware');
         http.send();
 
-        
-        
         http.onreadystatechange = function() {
             if (http.readyState == 4 && http.status == 200){
                 let modal = document.getElementById('modal')
@@ -265,7 +261,7 @@
 
         http.onreadystatechange = function() {
             if (http.readyState == 4) {
-                let button = document.getElementById("blockingbutton");
+                let button = document.getElementById("blockStatus");
                 if (http.status == 200){
                     console.log(http.responseText);
                     if(http.responseText == 'blocking on')
@@ -307,14 +303,14 @@
                 if (http.status == 200){
                     console.log(http.responseText);
                     let server = http.responseText;
-                    let server_select = document.getElementById('server');
-                    let options = server_select.options;
+                    let dnssrv_select = document.getElementById('dnssrv');
+                    let options = dnssrv_select.options;
 
                     for(let j = 0; j < options.length; j++)
                     {
                         if (options[j].value == server)
                         {
-                            server_select.selectedIndex = j;
+                            dnssrv_select.selectedIndex = j;
                         }
                     }
                 }
