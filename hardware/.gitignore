@@ -1,7 +1,4 @@
 *.gbr
-*.csv
-*.xlsx
-*.xml
 *.drl
 *.zip
 *.gcode
