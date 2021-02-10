@@ -223,12 +223,12 @@ Error
 </html>
 <script>
 var err = document.getElementById('error');
+var button = document.getElementById("blockStatus")
 var version = document.getElementById("version");
 var updatesrv = document.getElementsByName("updatesrv")[0];
 var dnssrv = document.getElementsByName("dnssrv")[0];
 var url = document.getElementsByName("url")[0];
 var ip = document.getElementsByName("ip")[0];
-var confirmModal = document.getElementById("confirmModal");
 var updateButton = document.getElementById("updateButton");
 var updateModal = document.getElementById("updateModal");
 
@@ -243,12 +243,10 @@ if (http.readyState == 4){
 if (http.status == 200){
 let settings = JSON.parse(http.response);
 
-
 ip.value = settings.ip;
-
-
 url.value = settings.url;
-
+updatesrv.value = settings.updatesrv;
+version.innerHTML = settings.version;
 
 for(let j = 0; j < dnssrv.options.length; j++)
 {
@@ -258,14 +256,18 @@ dnssrv.selectedIndex = j;
 }
 }
 
-
-updatesrv.value = settings.updatesrv;
-
-
-version.innerHTML = settings.version;
+if(blocking.value == false)
+{
+button.innerHTML = 'Blocking On';
+button.className = "";
+}
+else if (blocking.value == true)
+{
+button.className = "altbtn";
+button.innerHTML = 'Blocking Off';
+}
 }
 else{
-
 err.innerHTML = http.responseText;
 err.style.visibility = 'visible'
 }
@@ -311,7 +313,6 @@ http.onreadystatechange = function() {
 if (http.readyState == 4){
 if (http.status == 200){
 let json = JSON.parse(http.response);
-let button = document.getElementById("blockStatus")
 if(json.blocking == false)
 {
 button.innerHTML = 'Blocking On';

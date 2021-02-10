@@ -132,12 +132,12 @@
 </html>
 <script>
     var err = document.getElementById('error');
+    var button = document.getElementById("blockStatus")
     var version = document.getElementById("version");
     var updatesrv = document.getElementsByName("updatesrv")[0];
     var dnssrv = document.getElementsByName("dnssrv")[0];
     var url = document.getElementsByName("url")[0];
     var ip = document.getElementsByName("ip")[0];
-    var confirmModal = document.getElementById("confirmModal");
     var updateButton = document.getElementById("updateButton");
     var updateModal = document.getElementById("updateModal");
 
@@ -152,13 +152,11 @@
                 if (http.status == 200){
                     let settings = JSON.parse(http.response);
                     
-                    // let ip = document.getElementsByName("ip")[0]
                     ip.value = settings.ip;
-
-                    // let url = document.getElementsByName("url")[0]
                     url.value = settings.url;
+                    updatesrv.value = settings.updatesrv;
+                    version.innerHTML = settings.version;
 
-                    // let dnssrv = document.getElementsByName("dnssrv")[0]
                     for(let j = 0; j < dnssrv.options.length; j++)
                     {
                         if (dnssrv.options[j].value == settings.dnssrv)
@@ -167,14 +165,18 @@
                         }
                     }
 
-                    // let updatesrv = document.getElementsByName("updatesrv")[0]
-                    updatesrv.value = settings.updatesrv;
-
-                    // let version = document.getElementById("version");
-                    version.innerHTML = settings.version;
+                    if(blocking.value == false)
+                    {
+                        button.innerHTML = 'Blocking On';
+                        button.className = "";
+                    }
+                    else if (blocking.value == true)
+                    {
+                        button.className = "altbtn";
+                        button.innerHTML = 'Blocking Off';
+                    }
                 }
                 else{
-                    // let err = document.getElementById('error');
                     err.innerHTML = http.responseText;
                     err.style.visibility = 'visible'
                 }
@@ -220,7 +222,6 @@
             if (http.readyState == 4){
                 if (http.status == 200){
                     let json = JSON.parse(http.response);
-                    let button = document.getElementById("blockStatus")
                     if(json.blocking == false)
                     {
                         button.innerHTML = 'Blocking On';
