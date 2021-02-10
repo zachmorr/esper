@@ -9,6 +9,7 @@
 #include "configuration.h"
 #include "application.h"
 #include "url.h"
+#include "ota.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -39,9 +40,10 @@ void app_main()
         ESP_ERROR_CHECK(initialize_blocklists());
         ESP_ERROR_CHECK(initialize_logging());
         ESP_ERROR_CHECK(wifi_init_sta());
-        while(initialize_sntp() == ESP_FAIL);
+        ESP_ERROR_CHECK(initialize_sntp());
         start_dns();
         start_application_webserver();
+        start_update_checking_task();
         set_led_state(STARTUP, CLEAR);
         set_led_state(BLOCKING, SET);
     }

@@ -199,14 +199,16 @@ static esp_err_t ota_status_get_handler(httpd_req_t *req)
 
     TaskHandle_t ota_task_handle = get_ota_task_handle();
 
-    if (ota_task_handle != NULL){
+    if (ota_task_handle != NULL)
+    {
         eTaskState ota_state = eTaskGetState(ota_task_handle);
 
         ESP_LOGI(TAG, "Request for firmware update status (%d)", ota_state);
         httpd_resp_set_type(req, "text/plain; charset=UTF-8");
         httpd_resp_sendstr(req, "running...");
     }
-    else{
+    else
+    {
         httpd_resp_sendstr(req, "done");
     }
 

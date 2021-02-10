@@ -5,9 +5,9 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 #include "esp_system.h"
 #include "esp_event.h"
-#include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
 #include "esp_flash_partitions.h"
@@ -15,14 +15,20 @@
 #include "string.h"
 #include "errno.h"
 
-#define UPDATE_URL "https://upgrade.esperdns.co/EsperDNS.bin"
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#include "esp_log.h"
 static const char *TAG = "OTA";
 
 #define BUFFSIZE 1024
+#define UPDATE_CHECK_INTERVAL_S 10
 
 static TaskHandle_t ota_task_handle = NULL;
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
+static bool update_available = false;
 
+bool is_update_available(){
+    return update_available; 
+}
 
 static void http_cleanup(esp_http_client_handle_t client)
 {
@@ -40,13 +46,69 @@ static void __attribute__((noreturn)) task_fatal_error(void)
     }
 }
 
-static void infinite_loop(void)
+static void check_for_update_task(void *pvParameter)
 {
-    int i = 0;
-    ESP_LOGI(TAG, "When a new firmware is available on the server, press the reset button to download it");
-    while(1) {
-        ESP_LOGI(TAG, "Waiting for a new firmware ... %d", ++i);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    while(1)
+    {
+        char updatesrv[MAX_URL_LENGTH+CONFIG_HTTPD_MAX_URI_LEN];
+        nvs_get("update_server", (void*)updatesrv, 0);
+        esp_http_client_config_t config = {
+            .url = updatesrv,
+            .timeout_ms = 2000,
+        };
+        ESP_LOGI(TAG, "Checking %s for update...", updatesrv);
+
+        esp_http_client_handle_t client = esp_http_client_init(&config);
+        if (client == NULL) {
+            ESP_LOGE(TAG, "Failed to initialise HTTP connection");
+            continue;
+        }
+
+        esp_err_t err = esp_http_client_open(client, 0);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
+            esp_http_client_cleanup(client);
+            continue;
+        }
+        esp_http_client_fetch_headers(client);
+
+        int data_read = esp_http_client_read(client, ota_write_data, BUFFSIZE);
+        if (data_read <= 0) 
+        {
+            ESP_LOGE(TAG, "Error: no data read");
+        } 
+        else if (data_read > 0) 
+        {
+            esp_app_desc_t new_app_info;
+            if (data_read > sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t)) 
+            {
+                // check current version with downloading
+                memcpy(&new_app_info, &ota_write_data[sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t)], sizeof(esp_app_desc_t));
+                if ( new_app_info.magic_word != 0xABCD5432)
+                {
+                    ESP_LOGI(TAG, "New firmware has invalid magic word (%X)", new_app_info.magic_word);
+                }
+                else
+                {
+                    char* ptr;
+                    double version = strtod(new_app_info.version, &ptr);
+                    ESP_LOGI(TAG, "New firmware version: %lf", version);
+
+                    esp_app_desc_t running_app_info;
+                    const esp_partition_t *running = esp_ota_get_running_partition();
+                    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
+                        ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
+                    }
+                }
+            } 
+            else 
+            {
+                ESP_LOGE(TAG, "received package too small");
+            }
+        }
+        esp_http_client_close(client);
+        esp_http_client_cleanup(client);
+        vTaskDelay(UPDATE_CHECK_INTERVAL_S*1000/portTICK_PERIOD_MS);
     }
 }
 
@@ -100,14 +162,19 @@ static void ota_task(void *pvParameter)
     bool image_header_was_checked = false;
     while (1) {
         int data_read = esp_http_client_read(client, ota_write_data, BUFFSIZE);
-        if (data_read < 0) {
+        if (data_read < 0) 
+        {
             ESP_LOGE(TAG, "Error: SSL data read error");
             http_cleanup(client);
             task_fatal_error();
-        } else if (data_read > 0) {
-            if (image_header_was_checked == false) {
+        } 
+        else if (data_read > 0) 
+        {
+            if (image_header_was_checked == false) 
+            {
                 esp_app_desc_t new_app_info;
-                if (data_read > sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t)) {
+                if (data_read > sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t)) 
+                {
                     // check current version with downloading
                     memcpy(&new_app_info, &ota_write_data[sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t)], sizeof(esp_app_desc_t));
                     ESP_LOGI(TAG, "New firmware version: %s", new_app_info.version);
@@ -124,8 +191,10 @@ static void ota_task(void *pvParameter)
                     }
 
                     // check current version with last invalid partition
-                    if (last_invalid_app != NULL) {
-                        if (memcmp(invalid_app_info.version, new_app_info.version, sizeof(new_app_info.version)) == 0) {
+                    if (last_invalid_app != NULL) 
+                    {
+                        if (memcmp(invalid_app_info.version, new_app_info.version, sizeof(new_app_info.version)) == 0) 
+                        {
                             ESP_LOGW(TAG, "New version is the same as invalid version.");
                             ESP_LOGW(TAG, "Previously, there was an attempt to launch the firmware with %s version, but it failed.", invalid_app_info.version);
                             ESP_LOGW(TAG, "The firmware has been rolled back to the previous version.");
@@ -143,13 +212,16 @@ static void ota_task(void *pvParameter)
                     image_header_was_checked = true;
 
                     err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
-                    if (err != ESP_OK) {
+                    if (err != ESP_OK) 
+                    {
                         ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
                         http_cleanup(client);
                         task_fatal_error();
                     }
                     ESP_LOGI(TAG, "esp_ota_begin succeeded");
-                } else {
+                } 
+                else 
+                {
                     ESP_LOGE(TAG, "received package is not fit len");
                     http_cleanup(client);
                     task_fatal_error();
@@ -162,7 +234,9 @@ static void ota_task(void *pvParameter)
             }
             binary_file_length += data_read;
             ESP_LOGD(TAG, "Written image length %d", binary_file_length);
-        } else if (data_read == 0) {
+        } 
+        else if (data_read == 0) 
+        {
            /*
             * As esp_http_client_read never returns negative error code, we rely on
             * `errno` to check for underlying transport connectivity closure if any
@@ -205,66 +279,6 @@ static void ota_task(void *pvParameter)
     return ;
 }
 
-// esp_err_t _http_event_handler(esp_http_client_event_t *evt)
-// {
-//     switch (evt->event_id) {
-//     case HTTP_EVENT_ERROR:
-//         ESP_LOGD(TAG, "HTTP_EVENT_ERROR");
-//         break;
-//     case HTTP_EVENT_ON_CONNECTED:
-//         ESP_LOGD(TAG, "HTTP_EVENT_ON_CONNECTED");
-//         break;
-//     case HTTP_EVENT_HEADER_SENT:
-//         ESP_LOGD(TAG, "HTTP_EVENT_HEADER_SENT");
-//         break;
-//     case HTTP_EVENT_ON_HEADER:
-//         ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
-//         break;
-//     case HTTP_EVENT_ON_DATA:
-//         ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-//         break;
-//     case HTTP_EVENT_ON_FINISH:
-//         ESP_LOGD(TAG, "HTTP_EVENT_ON_FINISH");
-//         break;
-//     case HTTP_EVENT_DISCONNECTED:
-//         ESP_LOGD(TAG, "HTTP_EVENT_DISCONNECTED");
-//         break;
-//     }
-//     return ESP_OK;
-// }
-
-// void ota_task(void *pvParameter)
-// {
-//     ESP_LOGI(TAG, "Starting OTA ");
-//     set_led_state(OTA, SET);
-
-//     char updatesrv[MAX_URL_LENGTH+HTTPD_MAX_URI_LEN];
-//     nvs_get("update_server", (void*)updatesrv, 0);
-
-//     esp_http_client_config_t config = {
-//         .url = UPDATE_URL,
-//         .cert_pem = (char *)server_cert_pem_start,
-//         .event_handler = _http_event_handler,
-//     };
-
-//     esp_err_t ret = esp_https_ota(&config);
-//     if(ret == ESP_FAIL)
-//     {
-//         ESP_LOGE(TAG, "Firmware update failed");
-//     }
-//     else
-//     {
-//         ESP_LOGI(TAG, "Done writing new firmware");
-//     }
-
-//     set_led_state(OTA, CLEAR);
-//     vTaskSuspend(NULL);
-//     while(1)
-//     {
-//         vTaskDelay(1000 / portTICK_RATE_MS);
-//     }
-// }
-
 TaskHandle_t get_ota_task_handle()
 {
     return ota_task_handle;
@@ -273,5 +287,11 @@ TaskHandle_t get_ota_task_handle()
 esp_err_t start_ota(){
     xTaskCreatePinnedToCore(&ota_task, "ota_task", 
                             8192, NULL, 5, &ota_task_handle, 0);
+    return ESP_OK;
+}
+
+esp_err_t start_update_checking_task(){
+    ESP_LOGI(TAG, "Starting update checker task");
+    xTaskCreatePinnedToCore(&check_for_update_task, "update_check_task", 8192, NULL, 5, NULL, 0);
     return ESP_OK;
 }

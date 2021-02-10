@@ -1,20 +1,20 @@
 TODO:
+Devices
+    add menuconfig options for dev boards (gpio & ota)
 Settings
     advanced settings fold
-    show current firmware version
     show if there is any available updates
-    URL for webserver
-    Change IP
-    change update server
 Debugging page
     remaining memory
         total and for each task
     Error logs
     clear logs
 OTA Updates
+    Nightly check for updates
     Rollback to previous version
     progress bar
     error catching
+    self-test on startup
 Analytics
     Total queries and total blocked queries
     most blocked/queried websites
@@ -30,10 +30,8 @@ WEBSITE
     show currently connected network & ip
     show connected clients
     Add log page select to homepage 
-    Add JSON support
     Upload/download blacklist files
-    Cancel buttons do nothing
-
+    Cancel buttons
 BLACKLIST
     Handling reload_blacklist() errors
     Benchmark speed improvement from keeping blacklist in RAM instead of flash
