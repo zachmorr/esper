@@ -91,13 +91,21 @@ static void check_for_update_task(void *pvParameter)
                 else
                 {
                     char* ptr;
-                    double version = strtod(new_app_info.version, &ptr);
-                    ESP_LOGI(TAG, "New firmware version: %lf", version);
+                    double new_version = strtod(new_app_info.version, &ptr);
+                    ESP_LOGI(TAG, "New firmware version: %lf", new_version);
 
                     esp_app_desc_t running_app_info;
+                    double running_version;
                     const esp_partition_t *running = esp_ota_get_running_partition();
                     if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
-                        ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
+                        running_version = strtod(running_app_info.version, &ptr);
+                        ESP_LOGI(TAG, "Running firmware version: %s", running_version);
+                    }
+
+                    if (new_version > running_version)
+                    {
+                        ESP_LOGI(TAG, "Update Available!");
+                        update_available = true;
                     }
                 }
             } 
