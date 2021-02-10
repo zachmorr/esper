@@ -95,11 +95,11 @@ static void check_for_update_task(void *pvParameter)
                     ESP_LOGI(TAG, "New firmware version: %lf", new_version);
 
                     esp_app_desc_t running_app_info;
-                    double running_version;
+                    double running_version = 0.0;
                     const esp_partition_t *running = esp_ota_get_running_partition();
                     if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
                         running_version = strtod(running_app_info.version, &ptr);
-                        ESP_LOGI(TAG, "Running firmware version: %s", running_version);
+                        ESP_LOGI(TAG, "Running firmware version: %lf", running_version);
                     }
 
                     if (new_version > running_version)
