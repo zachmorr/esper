@@ -130,15 +130,15 @@ static void ota_task(void *pvParameter)
                             ESP_LOGW(TAG, "Previously, there was an attempt to launch the firmware with %s version, but it failed.", invalid_app_info.version);
                             ESP_LOGW(TAG, "The firmware has been rolled back to the previous version.");
                             http_cleanup(client);
-                            infinite_loop();
+                            task_fatal_error();
                         }
                     }
 
-                    if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0) {
-                        ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
-                        http_cleanup(client);
-                        infinite_loop();
-                    }
+                    // if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0) {
+                    //     ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
+                    //     http_cleanup(client);
+                    //     task_fatal_error();
+                    // }
 
                     image_header_was_checked = true;
 
