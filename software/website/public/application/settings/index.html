@@ -342,7 +342,7 @@
             if (http.readyState == 4 && http.status == 200){
                 let modal = document.getElementById('modal')
                 updateModal.style.display = 'block';
-                interval_handle = setInterval(checkUpgradeStatus, 2000);
+                interval_handle = setInterval(checkUpgradeStatus, 5000);
             }
         }
     }
