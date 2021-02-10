@@ -37,6 +37,9 @@
             #savebtn {
                 padding:0.3rem;
             }
+            #update_available {
+                visibility: hidden;
+            }
             .loader {
                 display: inline-block;
                 border: 4px solid #f3f3f3;
@@ -114,7 +117,9 @@
                         <button class="txtbtn" id="savebtn" onclick=saveSettings()>Save</button>
                     </div>
                 </div>
-                <div>
+                <br><br>
+                <div id="update_available">
+                    <p>Update Available!</p>
                     <button class="txtbtn" id="updateButton" onclick='updateFirmware()'>Update Firmware</button>
                 </div>
                 <div class='modal' id='updateModal'>
@@ -140,6 +145,7 @@
     var ip = document.getElementsByName("ip")[0];
     var updateButton = document.getElementById("updateButton");
     var updateModal = document.getElementById("updateModal");
+    var update_available = document.getElementById("update_available");
 
     getSettings();
     function getSettings() {
@@ -174,6 +180,15 @@
                     {
                         button.className = "altbtn";
                         button.innerHTML = 'Blocking Off';
+                    }
+
+                    if(settings.update == true)
+                    {
+                        update_available.style.visibility = 'visible';
+                    }
+                    else
+                    {
+                        update_available.style.visibility = 'hidden';
                     }
                 }
                 else{

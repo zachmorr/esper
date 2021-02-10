@@ -61,6 +61,9 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     const esp_app_desc_t* firmware = esp_ota_get_app_description();
     cJSON_AddStringToObject(json, "version", firmware->version);
 
+    bool update_available = is_update_available();
+    cJSON_AddBoolToObject(json, "update", update_available);
+
     httpd_resp_set_type(req, "application/json;");
     httpd_resp_set_status(req, "200 OK");
     httpd_resp_sendstr(req, cJSON_Print(json));

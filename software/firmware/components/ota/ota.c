@@ -20,7 +20,7 @@
 static const char *TAG = "OTA";
 
 #define BUFFSIZE 1024
-#define UPDATE_CHECK_INTERVAL_S 10
+#define UPDATE_CHECK_INTERVAL_S 3600
 
 static TaskHandle_t ota_task_handle = NULL;
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
