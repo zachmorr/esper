@@ -160,6 +160,43 @@ static void init_wifi()
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
 }
 
+esp_err_t set_network_info(){
+    // Give interfaces static IPs
+    esp_netif_dhcpc_stop(eth_netif);
+    esp_netif_dhcpc_stop(wifi_netif);
+
+    esp_netif_ip_info_t ip_info;
+    char ip[IP4ADDR_STRLEN_MAX+1] = {0};
+    ESP_LOGI(TAG, "Network Info:");
+
+    nvs_get("nm", (void*)ip, IP4ADDR_STRLEN_MAX);
+    ESP_LOGI(TAG, "Netmask: %s", ip);
+    inet_pton(AF_INET, ip, &ip_info.netmask);
+
+    nvs_get("gw", (void*)ip, IP4ADDR_STRLEN_MAX);
+    ESP_LOGI(TAG, "Gateway: %s", ip);
+    inet_pton(AF_INET, ip, &ip_info.gw);
+
+    nvs_get("ip", (void*)ip, IP4ADDR_STRLEN_MAX);
+    ESP_LOGI(TAG, "Static IP:%s", ip);
+    inet_pton(AF_INET, ip, &ip_info.ip);
+
+    esp_netif_set_ip_info(eth_netif, &ip_info);
+    esp_netif_set_ip_info(wifi_netif, &ip_info);
+
+    // Set main DNS provider, used to connected to SNTP server
+    esp_netif_dns_info_t dns = {0};
+    char upstream_server[IP4ADDR_STRLEN_MAX];
+    nvs_get("upstream_server", (void*)upstream_server, IP4ADDR_STRLEN_MAX);
+    ip4addr_aton(upstream_server, (ip4_addr_t*)&dns.ip.u_addr.ip4);
+    dns.ip.type = IPADDR_TYPE_V4;
+    
+    esp_netif_set_dns_info(eth_netif, ESP_NETIF_DNS_MAIN, &dns);
+    esp_netif_set_dns_info(wifi_netif, ESP_NETIF_DNS_MAIN, &dns);
+
+    return ESP_OK;
+}
+
 esp_err_t wifi_init_sta()
 {
     ESP_LOGI(TAG, "Initializing Station");
@@ -173,33 +210,7 @@ esp_err_t wifi_init_sta()
     netif_event_group = xEventGroupCreate();
     init_ethernet();
     init_wifi();
-
-    // Give interfaces static IPs
-    esp_netif_dhcpc_stop(eth_netif);
-    esp_netif_dhcpc_stop(wifi_netif);
-
-    esp_netif_ip_info_t ip_info;
-    char ip[IP4ADDR_STRLEN_MAX+1] = {0};
-    ESP_LOGI(TAG, "Network Info:");
-    ESP_LOGI(TAG, "Netmask: %s", get_netmask(ip));
-    inet_pton(AF_INET, get_netmask(ip), &ip_info.netmask);
-    ESP_LOGI(TAG, "Gateway: %s", get_gateway(ip));
-    inet_pton(AF_INET, get_gateway(ip), &ip_info.gw);
-    ESP_LOGI(TAG, "Static IP:%s", get_static_ip(ip));
-    inet_pton(AF_INET, get_static_ip(ip), &ip_info.ip);
-
-    esp_netif_set_ip_info(eth_netif, &ip_info);
-    esp_netif_set_ip_info(wifi_netif, &ip_info);
-
-    // Set main DNS provider, used to connected to SNTP server
-    esp_netif_dns_info_t dns = {0};
-    char upstream_server[IP4ADDR_STRLEN_MAX];
-    get_upstream_server(upstream_server);
-    ip4addr_aton(upstream_server, (ip4_addr_t*)&dns.ip.u_addr.ip4);
-    dns.ip.type = IPADDR_TYPE_V4;
-    esp_netif_set_dns_info(eth_netif, ESP_NETIF_DNS_MAIN, &dns);
-    esp_netif_set_dns_info(wifi_netif, ESP_NETIF_DNS_MAIN, &dns);
-
+    set_network_info();
     esp_eth_start(eth_handle);
     //esp_wifi_start();
 

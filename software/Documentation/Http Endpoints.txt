@@ -18,10 +18,10 @@ Endpoint,               Type,       Data,   Description,
 Configuration:
 Endpoint,               Type,       Data    Description,
 /favicon.ico            GET         ico     Get favicon
-/wifi.txt               GET         text    Get list of available wifi
+/wifi.json               GET         text    Get list of available wifi
 /scan                   POST                Start scan of wifi
 /submitauth             POST        text    Submit authentication data and attempt to connect
-/connection.txt         GET         text    Get connection details (IP & SSID)
+/connection.json         GET         text    Get connection details (IP & SSID)
 /hotspot-detect.html    GET         text    Apple devices use this to check for captive portal
 /connecttest.txt        GET         text    Windows devices use this to check for captive portal
 /connected              GET         html    Get webpage with connection info, only available after successful connection

@@ -22,12 +22,14 @@ static TaskHandle_t logging;
 static uint16_t log_head;
 static bool full_flag;
 
-void get_log_head(uint16_t* head, bool* flag)
+esp_err_t get_log_head(uint16_t* head, bool* flag)
 {
     xSemaphoreTake(log_mutex, portMAX_DELAY);
     *head = log_head;
     *flag = full_flag;
     xSemaphoreGive(log_mutex);
+
+    return ESP_OK;
 }
 
 esp_err_t log_query(URL url, bool blocked, uint32_t client)
@@ -54,59 +56,76 @@ esp_err_t log_query(URL url, bool blocked, uint32_t client)
 
 static void logging_task(void* args)
 {
-    get_log_values(&log_head, &full_flag);
-    ESP_LOGI(TAG, "Logging Task Started");
-    while(1)
+    // get_log_values(&log_head, &full_flag);
+    esp_err_t head_err = nvs_get("log_head", (void*)&log_head, sizeof(log_head));
+    esp_err_t flag_err = nvs_get("full_flag", (void*)&full_flag, sizeof(full_flag));
+
+    if (head_err != ESP_OK || flag_err != ESP_OK)
     {
-        xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
-        long start = esp_timer_get_time();
-
-        // get all entries waiting to be logged
-        uint8_t entries_in_queue = uxQueueMessagesWaiting(log_queue);
-        ESP_LOGI(TAG, "Adding %d entries to log", entries_in_queue);
-
-        FILE* log = fopen("/spiffs/log", "r+");
-        if(log)
+        ESP_LOGE(TAG, "Error getting log buffer info, logging disabled");
+        while(1){ vTaskDelay(10000 / portTICK_PERIOD_MS); }
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Logging Task Started");
+        while(1)
         {
-            for(int i = 0; i < entries_in_queue; i++)
+            xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
+            long start = esp_timer_get_time();
+
+            // get all entries waiting to be logged
+            uint8_t entries_in_queue = uxQueueMessagesWaiting(log_queue);
+            ESP_LOGI(TAG, "Adding %d entries to log", entries_in_queue);
+
+            FILE* log = fopen("/spiffs/log", "r+");
+            if(log)
             {
-                Log_Entry entry = {0};
-                esp_err_t err = xQueueReceive(log_queue, &entry, portMAX_DELAY);
-                if(err == pdFALSE)
+                for(int i = 0; i < entries_in_queue; i++)
                 {
-                    ESP_LOGW(TAG, "Error reading entry %d from log_queue", i);
-                }
-                else
-                {
-                    // Entries are retrieved from queue FIFO (oldest first) so log_head moves backwards to keep newest entries at the front
-                    xSemaphoreTake(log_mutex, portMAX_DELAY);
-                    if(log_head <= 0)  // Reset head position if it is at the end
+                    Log_Entry entry = {0};
+                    esp_err_t err = xQueueReceive(log_queue, &entry, portMAX_DELAY);
+                    if(err == pdFALSE)
                     {
-                        log_head = MAX_LOGS;
-                        full_flag = true;
+                        ESP_LOGW(TAG, "Error reading entry %d from log_queue", i);
                     }
-
-                    log_head--;
-                    ESP_LOGV(TAG, "Adding %*s to log address %d(%d)", entry.url.length, entry.url.string, log_head, log_head*sizeof(Log_Entry));
-
-                    if(fseek(log, log_head*sizeof(Log_Entry), SEEK_SET))
-                        ESP_LOGW(TAG, "Could not fseek to %d(%d)", log_head, log_head*sizeof(Log_Entry));
-
-                    if(fwrite(&entry, sizeof(Log_Entry), 1, log))
-                        update_log_values(log_head, full_flag);
                     else
-                        ESP_LOGW(TAG, "Error adding %*s to log address %d", entry.url.length, entry.url.string, log_head);
+                    {
+                        // Entries are retrieved from queue FIFO (oldest first) so log_head moves backwards to keep newest entries at the front
+                        xSemaphoreTake(log_mutex, portMAX_DELAY);
+                        if(log_head <= 0)  // Reset head position if it is at the end
+                        {
+                            log_head = MAX_LOGS;
+                            full_flag = true;
+                        }
 
-                    xSemaphoreGive(log_mutex);
+                        log_head--;
+                        ESP_LOGV(TAG, "Adding %*s to log address %d(%d)", entry.url.length, entry.url.string, log_head, log_head*sizeof(Log_Entry));
+
+                        if(fseek(log, log_head*sizeof(Log_Entry), SEEK_SET))
+                            ESP_LOGW(TAG, "Could not fseek to %d(%d)", log_head, log_head*sizeof(Log_Entry));
+
+                        if(fwrite(&entry, sizeof(Log_Entry), 1, log))
+                        {
+                            // update_log_values(log_head, full_flag);
+                            nvs_set("log_head", (void*)&log_head, sizeof(log_head));
+                            nvs_set("full_flag", (void*)&full_flag, sizeof(full_flag));
+                        }
+                        else
+                        {
+                            ESP_LOGW(TAG, "Error adding %*s to log address %d", entry.url.length, entry.url.string, log_head);
+                        }
+
+                        xSemaphoreGive(log_mutex);
+                    }
                 }
+                fclose(log);
             }
-            fclose(log);
+            else
+            {
+                ESP_LOGW(TAG, "Error opening log file");
+            }
+            ESP_LOGI(TAG, "Time to add log entries: %.2lf ms", (esp_timer_get_time()-start)/1000.0);
         }
-        else
-        {
-            ESP_LOGW(TAG, "Error opening log file");
-        }
-        ESP_LOGI(TAG, "Time to add log entries: %.2lf ms", (esp_timer_get_time()-start)/1000.0);
     }
 }
 
@@ -125,7 +144,12 @@ esp_err_t create_log_file()
         }
         ESP_LOGD(TAG, "Log file %ld bytes large", ftell(log));
         fclose(log);
-        update_log_values(MAX_LOGS, false);
+
+        uint16_t size = MAX_LOGS; 
+        bool full = false;
+
+        nvs_set("log_head", (void*)&size, sizeof(size));
+        nvs_set("full_flag", (void*)&full, sizeof(full));
         return ESP_OK;
     }
     else

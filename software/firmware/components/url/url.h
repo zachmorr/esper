@@ -12,6 +12,7 @@
 #define URL_ERR_LIST_FUll 0x202
 #define URL_ERR_NOT_FOUND 0x203
 #define URL_ERR_ALREADY_EXISTS 0x204
+#define URL_ERR_INVALID_URL 0x205
 
 typedef struct {
     uint8_t length;

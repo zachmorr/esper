@@ -21,9 +21,10 @@ static const char *TAG = "DNS";
 #define CLIENT_QUEUE_SIZE 50
 
 static int sock;
-    // add mutex too dns_server_addr
+
 static struct sockaddr_in dns_server_addr;
 static socklen_t addrlen = sizeof(struct sockaddr_in);
+static SemaphoreHandle_t dns_server_mutex;
 
 static bool blocking_status = true;
 static SemaphoreHandle_t blocking_mutex;
@@ -34,13 +35,25 @@ static TaskHandle_t listening;
 static QueueHandle_t packet_queue;
 static Client client_queue[CLIENT_QUEUE_SIZE];
 
+static char device_url[MAX_URL_LENGTH];
 
-esp_err_t initialize_upstream_socket(char* ip)
+
+esp_err_t set_device_url(){
+    nvs_get("url", (void*)device_url, 0);
+    return ESP_OK;
+}
+
+esp_err_t initialize_upstream_socket()
 {
+    char upstream_server[IP4ADDR_STRLEN_MAX];
+    nvs_get("upstream_server", (void*)upstream_server, IP4ADDR_STRLEN_MAX);
+
+    xSemaphoreTake(dns_server_mutex, portMAX_DELAY);
     dns_server_addr.sin_family = PF_INET;
     dns_server_addr.sin_port = htons(DNS_PORT);
-    ip4addr_aton(ip, (ip4_addr_t *)&dns_server_addr.sin_addr.s_addr);
+    ip4addr_aton(upstream_server, (ip4_addr_t *)&dns_server_addr.sin_addr.s_addr);
     ESP_LOGI(TAG, "DNS Server Address: %s", inet_ntoa(dns_server_addr.sin_addr.s_addr));
+    xSemaphoreGive(dns_server_mutex);
 
     return ESP_OK;
 }
@@ -66,10 +79,6 @@ static void initialize_socket()
     	esp_restart(); // ¯\_(ツ)_/¯ 
     }
     ESP_LOGD(TAG, "Socket %d created and bound on port %d", sock, DNS_PORT);
-
-    char upstream_server[IP4ADDR_STRLEN_MAX];
-    get_upstream_server(upstream_server);
-    initialize_upstream_socket(upstream_server);
 }
 
 static IRAM_ATTR void listening_task(void* paramerters)
@@ -146,7 +155,7 @@ static IRAM_ATTR esp_err_t block_query(DNS_Header* header, Packet* packet, uint1
 
 static IRAM_ATTR esp_err_t redirect_response(DNS_Header* header, Packet* packet, uint16_t qtype)
 {
-    // DNS Answer (empty ip section) for redirecting esperdns.app
+    // DNS Answer (empty ip section) for redirecting
     const char ip4_redirect_response[] = "\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x02\x00\x04";
 
     size_t len = 0;
@@ -162,11 +171,12 @@ static IRAM_ATTR esp_err_t redirect_response(DNS_Header* header, Packet* packet,
 
         struct in_addr ip;
         char ip_str[IP4ADDR_STRLEN_MAX];
-        inet_pton(AF_INET, get_netmask(ip_str), &ip);
+        nvs_get("ip", (void*)ip_str, IP4ADDR_STRLEN_MAX);
+        inet_pton(AF_INET, ip_str, &ip);
         memcpy(answer_packet+packet->length+sizeof(ip4_redirect_response)-1, &ip.s_addr, 4);
 
         len = packet->length+A_RECORD_ANSWER_SIZE;
-        ESP_LOGD(TAG, "Sending fake A record for esperdns.app");
+        ESP_LOGD(TAG, "Sending fake A record");
     }
     else if(qtype == AAAA)
     {
@@ -177,7 +187,7 @@ static IRAM_ATTR esp_err_t redirect_response(DNS_Header* header, Packet* packet,
 
         memcpy(answer_packet, packet->data, packet->length);
         len = packet->length;
-        ESP_LOGD(TAG, "Sending fake AAAA record for esperdns.app");
+        ESP_LOGD(TAG, "Sending fake AAAA record");
     }
 
     int sendlen = sendto(sock, answer_packet, len, 0, 
@@ -197,7 +207,10 @@ static IRAM_ATTR esp_err_t forward_query(DNS_Header* header, Packet* packet)
 {
     ESP_LOGD(TAG, "Forwarding to %s",  inet_ntoa(dns_server_addr.sin_addr.s_addr));
 
+    xSemaphoreTake(dns_server_mutex, portMAX_DELAY);
     int sendlen = sendto(sock, packet->data, packet->length, 0, (struct sockaddr *)&dns_server_addr, addrlen);
+    xSemaphoreGive(dns_server_mutex);
+
     if(sendlen <= 0)
     {
         ESP_LOGW(TAG, "Failed to foward request");
@@ -308,9 +321,9 @@ static IRAM_ATTR void dns_task(void* nvs_h)
                     ESP_LOGD(TAG, "Question for %s from %s", url.string,
                                     inet_ntoa(packet.src_address.sin_addr.s_addr));
 
-                    if(memcmp(url.string, DEVICE_URL, url.length) == 0)
+                    if(memcmp(url.string, device_url, url.length) == 0)
                     {
-                        ESP_LOGW(TAG, "Redirecting Request for %s", DEVICE_URL);
+                        ESP_LOGW(TAG, "Redirecting Request for %s", device_url);
                         redirect_response(query.header, &packet, query.qtype);
                     }
                     else
@@ -353,8 +366,12 @@ void start_dns()
 {
     ESP_LOGI(TAG, "Starting DNS Task");
     blocking_mutex = xSemaphoreCreateMutex();
+    dns_server_mutex = xSemaphoreCreateMutex();
     packet_queue = xQueueCreate(PACKET_QUEUE_SIZE, sizeof(Packet));
+
     initialize_socket();
+    initialize_upstream_socket();
+    set_device_url();
 
     xTaskCreatePinnedToCore(listening_task, "listening_task", 
                             8000, NULL, 9, &listening, 1);

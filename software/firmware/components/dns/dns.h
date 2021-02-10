@@ -4,8 +4,8 @@
 #include <esp_system.h>
 #include "lwip/sockets.h"
 
-#define DEFAULT_UPSTREAM_DNS "8.8.8.8"
-#define DEVICE_URL "esper.com"
+#define DEFAULT_UPSTREAM_DNS "1.1.1.1"
+#define DEFAULT_DEVICE_URL "esper.com"
 
 #define DNS_PORT 53
 #define MAX_PACKET_SIZE 512
@@ -67,10 +67,11 @@ typedef struct
     int64_t response_latency;
 } Client;
 
-esp_err_t initialize_upstream_socket(char* ip);
+esp_err_t initialize_upstream_socket();
 void start_dns();
 IRAM_ATTR uint8_t parse_query(Packet* packet, DNS_Query* query);
 esp_err_t toggle_blocking();
 IRAM_ATTR bool blocking_on();
+esp_err_t set_device_url();
 
 #endif

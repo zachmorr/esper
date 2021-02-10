@@ -196,11 +196,10 @@
                 <h3>Recent Queries</h3>
                 <div class='size'>
                     <label class='sizelabel'>Entries per page</label>
-                    <select id='sizeselect' onchange="refreshTable()">
+                    <select id='sizeselect' onchange=refreshTable()>
                         <option value='10'>10</option>
-                        <option value='20'>20</option>
+                        <option value='20'>25</option>
                         <option value='50'>50</option>
-                        <option value='100'>100</option>
                     </select>
                 </div>
                 <div class='error' id='error'>
@@ -226,100 +225,90 @@
     </body>
 </html>
 <script>
-    var size = document.getElementById('sizeselect').value;
-    var page = 1;
-    var log_entries = 0;
-    window.onload = refreshTable();
+    refreshTable();
 
-    function refreshTable() {
-        size = document.getElementById('sizeselect').value;
-        page = 1;
+    function refreshTable(){
+        let err = document.getElementById('error');
+        err.style.visibility = 'hidden'
+
+        var size = document.getElementById('sizeselect').value;
+        var page = 0;
+        let url = 'log.json?size=' + size + '&page=' + page;
 
         let http = new XMLHttpRequest();
-        let url = 'log.csv?size=' + size + '&page=' + page;
         http.open("GET", url);
+        http.setRequestHeader("Accept", "application/json")
         http.send();
 
         http.onreadystatechange = function() {
-            if (http.readyState == 4 && http.status == 200){
-                var response = http.responseText.split(/\n/);
-                log_entries = parseInt(response[0])
-                console.log(log_entries + ' entries in log')
-                response.splice(0, 1);
-
-                log = [];
-                for (var i = 0; i < response.length; i++){
-                    if (response[i]) {
-                        log.push(response[i].split(','));
-                    }
-
+            if (http.readyState == 4){
+                if (http.status == 200){
+                    generateTable(JSON.parse(http.response))
                 }
-                console.log(log);
-                let table = document.querySelector("table");
-                generateTable(table, log);
-            }
-        }
-    }
-   
-
-    function generateTable(table, log) {
-
-        let tb = document.getElementsByTagName('tbody')[0];
-        while(tb.firstChild)
-        {
-            tb.removeChild(tb.firstChild);
-        }
-
-        for (let i = 0; i < log.length; i++){
-            if (i!=0) {
-                let row = tb.insertRow();
-                row.insertCell().innerHTML = log[i][0];
-                row.insertCell().innerHTML = log[i][1];
-                row.insertCell().innerHTML = log[i][2];
-
-                let button = document.createElement('button');
-
-                let blocked = log[i][3];
-                if (blocked == '1'){
-                    button.className = 'altbtn';
-                    button.innerHTML = "&check;"
-                    row.style.color = "#FF0000";
-                    button.onclick = function(){sumbitURL("whitelist", log[i][1])};
+                else if (http.status == 400){
+                    err.innerHTML = req.responseText;
+                    err.style.visibility = 'visible'
                 }
-                else{
-                    button.innerHTML = "&times;"
-                    button.onclick = function(){sumbitURL("blacklist", log[i][1])};
-                }
-
-                row.insertCell().appendChild(button)
-            }
-        }
-    }
-
-    function sumbitURL(list, domain){
-        let req = new XMLHttpRequest();
-        req.open('POST', list+'/add');
-        req.setRequestHeader('Content-Type','text/plain')
-        req.send(domain);
-
-        let err = document.getElementById('error');
-        err.style.visibility = 'hidden'
-        
-        req.onreadystatechange = function(){
-            if (req.readyState == 4)
-            {
-                if (req.status == 200)
-                {
-                    window.location.href = '/blacklist';
-                }
-                else
-                {
-                    console.log("Error " + req.status + " adding " + domain)
+                else if (http.status == 500){
                     err.innerHTML = req.responseText;
                     err.style.visibility = 'visible'
                 }
             }
         };
     }
-</script>
 
+    function generateTable(data){
+        let tb = document.getElementsByTagName('tbody')[0];
+        while(tb.firstChild)
+        {
+            tb.removeChild(tb.firstChild);
+        }
+
+        for (let i = 0; i < data.log_entries.length; i++){
+            let entry = data.log_entries[i];
+            let row = tb.insertRow();
+            row.insertCell().innerHTML = entry.time;
+            row.insertCell().innerHTML = entry.url;
+            row.insertCell().innerHTML = entry.client;
+
+            let button = document.createElement('button');
+            if (entry.blocked == true){
+                button.className = 'altbtn';
+                button.innerHTML = "&check;"
+                row.style.color = "#FF0000";
+            }
+            else{
+                button.innerHTML = "&times;"
+                button.onclick = function(){sumbitURL("blacklist", entry.url)};
+            }
+
+            row.insertCell().appendChild(button);
+        }
+    }
+
+    function sumbitURL(list, domain){
+        let http = new XMLHttpRequest();
+        http.open("POST", list+"/add");
+        http.setRequestHeader('Content-Type','application/json')
+
+        let data = { url: domain }
+        http.send(JSON.stringify(data));
+
+        http.onreadystatechange = function(){
+            if (http.readyState == 4)
+            {
+                if (http.status == 200)
+                {
+                    window.location.href = '/blacklist';
+                }
+                else
+                {
+                    let err = document.getElementById('error');
+                    console.log("Error " + http.status + " adding " + domain)
+                    err.innerHTML = http.responseText;
+                    err.style.visibility = 'visible'
+                }
+            }
+        };
+    }
+</script>

@@ -27,7 +27,7 @@
   </url>
   
   <url>
-    <loc>http://example.org/configuration/provwifi/</loc>
+    <loc>http://example.org/configuration/wifi_select/</loc>
   </url>
   
   <url>
@@ -35,7 +35,7 @@
   </url>
   
   <url>
-    <loc>http://example.org/configuration/provsettings/</loc>
+    <loc>http://example.org/configuration/connected/</loc>
   </url>
   
 </urlset>

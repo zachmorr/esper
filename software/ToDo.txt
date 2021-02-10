@@ -1,5 +1,6 @@
 TODO:
 Settings
+    advanced settings fold
     show current firmware version
     show if there is any available updates
     URL for webserver
@@ -8,9 +9,10 @@ Settings
 Debugging page
     remaining memory
         total and for each task
+    Error logs
     clear logs
 OTA Updates
-    Ability to update during provisioning?
+    Rollback to previous version
     progress bar
     error catching
 Analytics
@@ -30,6 +32,8 @@ WEBSITE
     Add log page select to homepage 
     Add JSON support
     Upload/download blacklist files
+    Cancel buttons do nothing
+
 BLACKLIST
     Handling reload_blacklist() errors
     Benchmark speed improvement from keeping blacklist in RAM instead of flash

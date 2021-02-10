@@ -1,23 +1,26 @@
 {
+    "env": {
+        "idfPath": "~/esp/esp-idf"
+    },
     "configurations": [
         {
             "name": "Linux",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "includePath": [
-                "${config:idf.espIdfPath}/components/**",
-                "${config:idf.espIdfPathWin}/components/**",
+                "${config:idf.espIdfPath}/firmware/components/**",
+                "${config:idf.espIdfPath}/firmware/components/**",
                 "${workspaceFolder}/**"
             ],
             "browse": {
                 "path": [
-                    "${config:idf.espIdfPath}/components",
-                    "${config:idf.espIdfPathWin}/components",
+                    "${config:idf.espIdfPath}/firmware/components",
+                    "${config:idf.espIdfPath}/firmware/components",
                     "${workspaceFolder}"
                 ],
                 "limitSymbolsToIncludedHeaders": false
             },
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+            "compileCommands": "${workspaceFolder}/firmware/build/compile_commands.json"
         }
     ],
     "version": 4

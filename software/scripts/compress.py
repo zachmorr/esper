@@ -3,16 +3,15 @@ from shutil import copyfile
 
 print('Compressing html...')
 
-output_dir = r'firmware/components/http/src'
+output_dir = r'firmware/components/http/'
 input_dir = r'website/public'
 
 files = [
-    (input_dir+r'/application/blacklist/index.html',        output_dir+r'/application/blacklist.html'),
-    (input_dir+r'/application/home/index.html',             output_dir+r'/application/home.html'),
-    (input_dir+r'/application/settings/index.html',         output_dir+r'/application/settings.html'),
-    (input_dir+r'/configuration/provfinished/index.html',   output_dir+r'/configuration/provfinished.html'),
-    (input_dir+r'/configuration/provsettings/index.html',   output_dir+r'/configuration/provsettings.html'),
-    (input_dir+r'/configuration/provwifi/index.html',       output_dir+r'/configuration/provwifi.html'),
+    (input_dir+r'/application/blacklist/index.html',        output_dir+r'/application/html/blacklist.html'),
+    (input_dir+r'/application/home/index.html',             output_dir+r'/application/html/home.html'),
+    (input_dir+r'/application/settings/index.html',         output_dir+r'/application/html/settings.html'),
+    (input_dir+r'/configuration/connected/index.html',   output_dir+r'/configuration/html/connected.html'),
+    (input_dir+r'/configuration/wifi_select/index.html',       output_dir+r'/configuration/html/wifi_select.html'),
 ]
 
 print('Creating output directory...')

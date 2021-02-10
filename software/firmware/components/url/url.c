@@ -34,105 +34,84 @@ static esp_err_t reload_blacklist()
 {
     FILE* f = NULL;
     f = fopen("/spiffs/blacklist", "r");
-    if(f)
-    {
-        xSemaphoreTake(blacklist_mutex, portMAX_DELAY);
-        url_in_blacklist = 0;
-
-        URL url = {0};
-        blacklist_size = 0;
-        while(fread(&url.length, sizeof(url.length), 1, f) == sizeof(url.length))
-        {
-            fread(&url.string, url.length, 1, f);
-            memcpy(blacklist+blacklist_size, &url, url.length+sizeof(url.length));
-            blacklist_size += url.length+sizeof(url.length);
-            url_in_blacklist++;
-        }
-        xSemaphoreGive(blacklist_mutex);
-        ESP_LOGI(TAG, "Blacklist size: %d bytes", blacklist_size);
-        return ESP_OK;
-    }
-    else
-    {
+    if ( !f )
         return URL_ERR_LIST_UNAVAILBLE;
+
+    xSemaphoreTake(blacklist_mutex, portMAX_DELAY);
+    url_in_blacklist = 0;
+
+    URL url = {0};
+    blacklist_size = 0;
+    while(fread(&url.length, sizeof(url.length), 1, f) == sizeof(url.length))
+    {
+        fread(&url.string, url.length, 1, f);
+        memcpy(blacklist+blacklist_size, &url, url.length+sizeof(url.length));
+        blacklist_size += url.length+sizeof(url.length);
+        url_in_blacklist++;
     }
+    xSemaphoreGive(blacklist_mutex);
+    ESP_LOGI(TAG, "Blacklist size: %d bytes", blacklist_size);
+    return ESP_OK;
 }
 
 esp_err_t add_to_blacklist(URL url)
 {
-    if(MAX_BLACKLIST_SIZE-blacklist_size > url.length+1)
-    {
-
-        if(!in_blacklist(url))
-        {
-            FILE* f = fopen("/spiffs/blacklist", "a");
-            if(f)
-            {
-                fwrite(&url, url.length+sizeof(url.length), 1, f);
-                fclose(f);
-                reload_blacklist();
-                return ESP_OK;
-            }
-            else
-            {
-                return URL_ERR_LIST_UNAVAILBLE;
-            }
-        }
-        else
-        {
-            return URL_ERR_ALREADY_EXISTS;
-        }
-    }
-    else
-    {
+    if ( MAX_BLACKLIST_SIZE-blacklist_size <= url.length+1 )
         return URL_ERR_LIST_FUll;
-    }
+
+    if ( !valid_url(url) )
+        return URL_ERR_INVALID_URL;
+
+    if ( in_blacklist(url) )
+        return URL_ERR_ALREADY_EXISTS;
+
+    FILE* f = fopen("/spiffs/blacklist", "a");
+    if( !f )
+        return URL_ERR_LIST_UNAVAILBLE;
+
+    fwrite(&url, url.length+sizeof(url.length), 1, f);
+    fclose(f);
+    reload_blacklist();
+    return ESP_OK;
 }
 
 esp_err_t remove_from_blacklist(URL removal)
 {
     FILE* f = fopen("/spiffs/blacklist", "r");
     FILE* tmp = fopen("/spiffs/tmplist", "w");
-    if(f && tmp)
+
+    if ( !f || !tmp)
+        return URL_ERR_LIST_UNAVAILBLE;
+
+    bool found_url = false;
+    URL url = {0};
+    while(fread(&url.length, sizeof(url.length), 1, f) == sizeof(url.length))
     {
-        bool found_url = false;
-        URL url = {0};
-        while(fread(&url.length, sizeof(url.length), 1, f) == sizeof(url.length))
+        fread(&url.string, url.length, 1, f);
+        ESP_LOGD(TAG, "Read %*s(%d) from list.txt", url.length, url.string, url.length);
+        if(memcmp(&url, &removal, sizeof(url.length)+url.length) == 0)
         {
-            fread(&url.string, url.length, 1, f);
-            ESP_LOGD(TAG, "Read %*s(%d) from list.txt", url.length, url.string, url.length);
-            if(memcmp(&url, &removal, sizeof(url.length)+url.length) == 0)
-            {
-                ESP_LOGI(TAG, "Removing %*s(%d) from list.txt", url.length, url.string, url.length);
-                found_url = true;
-            }
-            else
-            {
-                ESP_LOGD(TAG, "Writing %*s(%d) to list.txt", url.length, url.string, url.length);
-                fwrite(&url, sizeof(url.length)+url.length, 1, tmp);
-            }
-
-        }
-
-        fclose(tmp);
-        fclose(f);
-        unlink("/spiffs/blacklist");
-        rename("/spiffs/tmplist", "/spiffs/blacklist");
-        reload_blacklist();
-        
-        if(found_url)
-        {
-            return ESP_OK;
+            ESP_LOGI(TAG, "Removing %*s(%d) from list.txt", url.length, url.string, url.length);
+            found_url = true;
         }
         else
         {
-            return URL_ERR_NOT_FOUND;
+            ESP_LOGD(TAG, "Writing %*s(%d) to list.txt", url.length, url.string, url.length);
+            fwrite(&url, sizeof(url.length)+url.length, 1, tmp);
         }
+
     }
+
+    fclose(tmp);
+    fclose(f);
+    unlink("/spiffs/blacklist");
+    rename("/spiffs/tmplist", "/spiffs/blacklist");
+    reload_blacklist();
+    
+    if(found_url)
+        return ESP_OK;
     else
-    {
-        return URL_ERR_LIST_UNAVAILBLE;
-    }
+        return URL_ERR_NOT_FOUND;
 }
 
 esp_err_t store_default_lists()
@@ -168,18 +147,13 @@ bool valid_url(URL url)
 {
     for(int i = 0; i < url.length; i++)
     {
-        if(url.string[i] < '0' || url.string[i] > '9')
+        if( (url.string[i] < '0' || url.string[i] > '9') ||
+            (url.string[i] < 'A' || url.string[i] > 'Z') ||
+            (url.string[i] < 'a' || url.string[i] > 'z') ||
+            (url.string[i] != '.' && url.string[i] != '-' && 
+             url.string[i] != '*' && url.string[i] != '?'))
         {
-            if(url.string[i] < 'A' || url.string[i] > 'Z')
-            {
-                if(url.string[i] < 'a' || url.string[i] > 'z')
-                {
-                    if(url.string[i] != '.' && url.string[i] != '-' && url.string[i] != '*' && url.string[i] != '?')
-                    {
-                        return false;
-                    }
-                }
-            }
+            return false;
         }
     }
     return true;
@@ -228,7 +202,7 @@ IRAM_ATTR bool in_blacklist(URL url)
 IRAM_ATTR URL convert_qname_to_url(char* qname_ptr)
 {
     // QNAME is a sequence of labels, where each label consists of a length octet followed by that number of octets. 
-    // The domain name terminates with the zero lengthoctet for the null label of the root. 
+    // The domain name terminates with the zero length octet for the null label of the root. 
     URL url = {0};
     char* url_ptr = url.string;
 

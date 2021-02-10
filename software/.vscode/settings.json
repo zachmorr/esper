@@ -35,6 +35,9 @@
     "array": "c",
     "string_view": "c",
     "initializer_list": "c",
-    "utility": "c"
+    "utility": "c",
+    "json.h": "c",
+    "esp_ota_ops.h": "c",
+    "esp_http_server.h": "c"
   }
 }

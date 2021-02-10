@@ -16,7 +16,7 @@ typedef struct {
     bool blocked;
 } Log_Entry;
 
-void get_log_head(uint16_t* head, bool* flag);
+esp_err_t get_log_head(uint16_t* head, bool* flag);
 
 esp_err_t log_query(URL url, bool blocked, uint32_t client);
 esp_err_t create_log_file();

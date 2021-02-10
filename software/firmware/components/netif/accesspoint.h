@@ -10,7 +10,7 @@
 
 void wifi_init_apsta();
 void start_wifi_scan();
-void get_scan_results(uint16_t* count, wifi_ap_record_t** list);
+uint16_t get_scan_results(wifi_ap_record_t** list);
 bool test_authentication();
 
 #endif

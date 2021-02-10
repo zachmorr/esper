@@ -151,9 +151,8 @@ Error connecting to Wifi, please retry
 <div class="loader"></div>
 </div>
 <select id="ssid">
-<option value='Netgear'>Netgear</option>
 </select>
-<button onclick='scan_for_networks()'>Scan</button>
+<button onclick="get_wifi_json(true)">Scan</button>
 </div>
 <div id="password">
 <label for="pw">Password:</label>
@@ -166,7 +165,6 @@ Error connecting to Wifi, please retry
 <p>Attempting to connect...</p>
 <div class="loader"></div>
 <br><br>
-<button class="txtbtn altbtn" onclick=cancelConnect()>Cancel</button>
 </div>
 </div>
 </main>
@@ -176,62 +174,61 @@ Error connecting to Wifi, please retry
 </body>
 </html>
 <script>
-let wifi_ssid_request = new XMLHttpRequest();
-wifi_ssid_request.open("GET", 'wifi.txt');
-wifi_ssid_request.send();
+get_wifi_json(false);
+function get_wifi_json(rescan){
+let http = new XMLHttpRequest();
+if (rescan == true)
+{
+http.open("GET", 'wifi.json?rescan=true');
+scanning.style.visibility="visible";
+}
+else
+{
+http.open("GET", 'wifi.json?rescan=false');
+}
 
-wifi_ssid_request.onreadystatechange = function() {
-if (wifi_ssid_request.readyState == 4){
+http.send();
+
+http.onreadystatechange = function() {
+if (http.readyState == 4){
 let scanning = document.getElementById("scanning");
 scanning.style.visibility="hidden";
 
-if (wifi_ssid_request.status == 200){
-var response = wifi_ssid_request.responseText.split(/\n/);
-console.log(response);
+if (http.status == 200){
 
-var ssid_select = document.getElementById("ssid_select");
+var ssid_select = document.getElementById("ssid");
 while(ssid_select.firstChild)
 {
 ssid_select.removeChild(ssid_select.firstChild);
 }
 
-for (var i = 0; i < response.length-1; i++){
-var option = document.createElement("option");
-option.value = response[i];
-var ssid_name = document.createTextNode(response[i]);
-option.appendChild(ssid_name)
+var response = JSON.parse(http.response);
+console.log(response);
+
+let ssid_array = response.ssid_array;
+for (i in ssid_array){
+let option = document.createElement("option");
+option.value = ssid_array[i];
+option.innerHTML = ssid_array[i];
 ssid_select.appendChild(option)
 }
 }
 else{
-console.log("Could not get wifi.txt");
+console.log("Could not get wifi.json");
 }
 } 
 }
-
-function scan_for_networks(){
-console.log('Scanning...')
-let scanning = document.getElementById("scanning");
-scanning.style.visible="visible";
-
-const http = new XMLHttpRequest();
-http.open("POST", 'scan');
-http.send();
-wifi_ssid_request.open("GET", 'wifi.txt');
-wifi_ssid_request.send();
 }
 
 function submit_auth_data(){
-console.log('POSTing auth data');
 const http = new XMLHttpRequest();
-http.open("POST", '/submitauth');
-http.setRequestHeader('Content-Type', 'text/plain')
 
 let ssid_select = document.getElementById('ssid');
 let password_input = document.getElementById('pw');
-let postdata = ssid_select.value + '&' + password_input.value;
-console.log(postdata);
-http.send(postdata);
+let auth_data = { ssid: ssid_select.value, pass: password_input.value };
+
+http.open("POST", '/submitauth');
+http.send(JSON.stringify(auth_data));
 
 let modal = document.getElementById('modal')
 modal.style.display = 'block';

@@ -28,6 +28,7 @@ void app_main()
     esp_log_level_set("esp_eth.netif.glue", ESP_LOG_ERROR); 
 
     ESP_LOGI(TAG, "Starting...");
+
     ESP_ERROR_CHECK(initialize_gpio());
     set_led_state(STARTUP, SET);
     ESP_ERROR_CHECK(initialize_storage());

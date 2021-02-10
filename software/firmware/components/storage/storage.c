@@ -1,10 +1,12 @@
 #include "storage.h"
 #include "dns.h"
+#include "url.h"
 
-#include <esp_system.h>
-#include <string.h>
+#include "esp_system.h"
+#include "string.h"
 #include "nvs_flash.h"
 #include "esp_spiffs.h"
+#include "esp_http_server.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_WARN
 #include "esp_log.h"
@@ -12,132 +14,41 @@ static const char *TAG = "STORAGE";
 
 static nvs_handle nvs;
 
-
-esp_err_t get_log_values(uint16_t* log_head, bool* full_flag)
+esp_err_t nvs_set(char* key, void* value, size_t length)
 {
-    nvs_get_u16(nvs, "log_head", log_head);
-    nvs_get_u8(nvs, "full_flag", (uint8_t*)full_flag);
-    return ESP_OK;
-}
-
-esp_err_t update_log_values(uint16_t log_head, bool full_flag)
-{
-    ESP_LOGD(TAG, "Settings log values to %d %d", log_head, full_flag);
-    nvs_set_u16(nvs, "log_head", log_head);
-    nvs_set_u8(nvs, "full_flag", (uint8_t)full_flag);
-    return ESP_OK;
-}
-
-char* get_upstream_server(char* server)
-{
-    size_t size;
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "server", NULL, &size));
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "server", server, &size));
-    return server;
-}
-
-esp_err_t update_upstream_server(char* server)
-{
-    ESP_ERROR_CHECK(nvs_set_str(nvs, "server", server));
-    return ESP_OK;
-}
-
-char* get_static_ip(char* ip)
-{
-    size_t size;
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "ip", NULL, &size));
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "ip", ip, &size));
-    return ip;
-}
-
-esp_err_t update_static_ip(char* ip)
-{
-    ESP_ERROR_CHECK(nvs_set_str(nvs, "ip", ip));
-    return ESP_OK;
-}
-
-char* get_netmask(char* ip)
-{
-    size_t size;
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "nm", NULL, &size));
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "nm", ip, &size));
-    return ip;
-}
-
-esp_err_t update_netmask(char* ip)
-{
-    ESP_ERROR_CHECK(nvs_set_str(nvs, "nm", ip));
-    return ESP_OK;
-}
-
-char* get_gateway(char* ip)
-{
-    size_t size;
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "gw", NULL, &size));
-    ESP_ERROR_CHECK(nvs_get_str(nvs, "gw", ip, &size));
-    return ip;
-}
-
-esp_err_t update_gateway(char* ip)
-{
-    ESP_ERROR_CHECK(nvs_set_str(nvs, "gw", ip));
-    return ESP_OK;
-}
-
-esp_err_t get_from_nvs(StorageType type, char* key, void* value)
-{
-    switch(type)
+    esp_err_t ret = nvs_set_blob(nvs, key, value, length);
+    if (ret != ESP_OK) 
     {
-        case STR:
-            ESP_LOGD(TAG, "Getting string \"%s\" from nvs", key);
-            size_t size;
-            ESP_ERROR_CHECK(nvs_get_str(nvs, key, NULL, &size));
-            ESP_ERROR_CHECK(nvs_get_str(nvs, key, (char*)value, &size));
-            ESP_LOGD(TAG, "%s: %s", key, (char*)value);
-            return ESP_OK;
-        case UINT8:
-            ESP_LOGD(TAG, "Getting u8 \"%s\" from nvs", key);
-            ESP_ERROR_CHECK(nvs_get_u8(nvs, key, (uint8_t*)value));
-            ESP_LOGD(TAG, "%s: %d", key, *(uint8_t*)value);
-            return ESP_OK;
-        case UINT16:
-            ESP_LOGD(TAG, "Getting u16 \"%s\" from nvs", key);
-            ESP_ERROR_CHECK(nvs_get_u16(nvs, key, (uint16_t*)value));
-            ESP_LOGD(TAG, "%s: %d", key, *(uint16_t*)value);
-            return ESP_OK;
-        case UINT32:
-            ESP_LOGD(TAG, "Getting u32 \"%s\" from nvs", key);
-            ESP_ERROR_CHECK(nvs_get_u32(nvs, key, (uint32_t*)value));
-            ESP_LOGD(TAG, "%s: %d", key, *(uint32_t*)value);
-            return ESP_OK;
-        default:
-            return ESP_FAIL;
+        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
     }
+    return ret;
 }
 
-esp_err_t store_in_nvs(StorageType type, char* key, void* value)
+esp_err_t nvs_get_length(char* key, size_t* length)
 {
-    switch(type)
+    esp_err_t ret = nvs_get_blob(nvs, key, NULL, length);
+    if (ret != ESP_OK) 
     {
-        case STR:
-            ESP_LOGD(TAG, "Storing %s in %s", (char*)value, key);
-            ESP_ERROR_CHECK(nvs_set_str(nvs, key, (char*)value));
-            return ESP_OK;
-        case UINT8:
-            ESP_LOGD(TAG, "Storing %d in %s", *(uint8_t*)value, key);
-            ESP_ERROR_CHECK(nvs_set_u8(nvs, key, *(uint8_t*)value));
-            return ESP_OK;
-        case UINT16:
-            ESP_LOGD(TAG, "Storing %d in %s", *(uint16_t*)value, key);
-            ESP_ERROR_CHECK(nvs_set_u16(nvs, key, *(uint16_t*)value));
-            return ESP_OK;
-        case UINT32:
-            ESP_LOGD(TAG, "Storing %d in %s", *(uint32_t*)value, key);
-            ESP_ERROR_CHECK(nvs_set_u32(nvs, key, *(uint32_t*)value));
-            return ESP_OK;
-        default:
-            return ESP_FAIL;
+        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
+        *length = 0;
     }
+    return ret;
+}
+
+esp_err_t nvs_get(char* key, void* value, size_t length)
+{
+    if (length < 1)
+    {
+        nvs_get_length(key, &length);
+    }
+
+    esp_err_t ret = nvs_get_blob(nvs, key, value, &length);
+    if (ret != ESP_OK) 
+    {
+        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
+        *((uint8_t*)value) = 0;
+    }
+    return ret;
 }
 
 esp_err_t initialize_storage()
@@ -188,44 +99,43 @@ esp_err_t initialize_storage()
     return ESP_OK;
 }
 
-esp_err_t finish_configuration()
+esp_err_t set_defaults()
 {
-    ESP_LOGD(TAG, "Setting keys in nvs to default values and flipping ");
-    ESP_ERROR_CHECK(nvs_set_u16(nvs, "logposition", 0));
-    ESP_ERROR_CHECK(nvs_set_str(nvs, "server", DEFAULT_UPSTREAM_DNS));
-    ESP_ERROR_CHECK(nvs_set_u8(nvs, "config status", 1));
-    return ESP_OK;
+    ESP_LOGD(TAG, "Setting keys in nvs to default values and flipping config bit");
+
+    esp_err_t err = nvs_set_blob(nvs, "upstream_server", DEFAULT_UPSTREAM_DNS, IP4ADDR_STRLEN_MAX);
+    err |= nvs_set_blob(nvs, "url", DEFAULT_DEVICE_URL, MAX_URL_LENGTH);
+    err |= nvs_set_blob(nvs, "update_server", DEFAULT_UPSTREAM_DNS, MAX_URL_LENGTH+HTTPD_MAX_URI_LEN);
+
+    uint8_t conf_status = 1;
+    err |= nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
+
+    if (err)
+        return ESP_FAIL;
+    else
+        return ESP_OK;
 }
 
 esp_err_t reset_device()
 {
     ESP_LOGI(TAG, "Reseting Device");
-    ESP_ERROR_CHECK(nvs_set_u8(nvs, "config status", 0));
-    return ESP_OK;
+    uint8_t conf_status = 0;
+    esp_err_t err = nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
+    return err;
 }
 
 bool check_configuration_status()
 {
-    uint8_t config_status;
-    ESP_LOGD(TAG, "Reading config status");
-    esp_err_t err = nvs_get_u8(nvs, "config status", &config_status);
+    ESP_LOGD(TAG, "Reading config_status");
 
-    if(err == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Config Status: %d", config_status);
-        if(config_status)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    else
+    uint8_t config_status;
+    esp_err_t err = nvs_get("config_status", (void*)&config_status, sizeof(config_status));
+
+    if (err)
     {
         ESP_LOGE(TAG, "NVS Read Returned: %s", esp_err_to_name(err));
         return false;
     }
+    else
+        return (bool)config_status;
 }
-

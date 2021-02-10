@@ -1,9 +1,19 @@
-idf_component_register(SRCS "configuration.c" "application.c"
-                    INCLUDE_DIRS "."
-                    PRIV_REQUIRES netif dns storage datetime url spiffs esp_http_server ota
-                    EMBED_FILES "src/configuration/provwifi.html"
-                                "src/configuration/provsettings.html"
-                                "src/configuration/provfinished.html"
-                                "src/application/home.html"
-                                "src/application/blacklist.html"
-                                "src/application/settings.html")
+idf_component_register( SRCS            "application/application.c"
+                                        "application/home.c"
+                                        "application/blacklist.c"
+                                        "application/settings.c"
+                                        "configuration/configuration.c"
+                                        "configuration/wifi_select.c"
+                                        "configuration/connected.c"
+
+                        INCLUDE_DIRS    "application/include/"
+                                        "configuration/include/"
+                                        "."
+
+                        PRIV_REQUIRES   netif dns storage datetime url spiffs esp_http_server ota json app_update
+
+                        EMBED_FILES     "configuration/html/wifi_select.html"
+                                        "configuration/html/connected.html"
+                                        "application/html/home.html"
+                                        "application/html/blacklist.html"
+                                        "application/html/settings.html")

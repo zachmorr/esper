@@ -89,7 +89,11 @@
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
-            form {
+            .error {
+                visibility: hidden;
+                color: red;
+            }
+            .settings {
                 margin: 2rem auto;
                 width: 30rem;
                 max-width: 100%;
@@ -105,8 +109,12 @@
                 width: 45%;
                 padding-right: 1rem;
             }
-            input, select {
+            input, select, #version {
                 display: inline-block;
+                max-width: 50%;
+            }
+            #savebtn {
+                padding:0.3rem;
             }
             .loader {
                 display: inline-block;
@@ -161,15 +169,18 @@
                 <h1>Settings</h1>
             </div>
             <div>
-                <button id="blockStatus" onclick=toggleBlockingStatus()>Blocking On</button><br>
-                <form>
+                <button id="blockStatus" onclick=toggleBlockingStatus()>Blocking On</button>
+                <div class="settings">
+                    <div class='error' id='error'>
+                        Error
+                    </div>
                     <div class="setting" >
                         <label for="ip">Device IP</label>
-                        <input disabled=true name="ip" type="text" autocorrect="off" autocapitalize="none"/>
+                        <input name="ip" type="text" autocorrect="off" autocapitalize="none"/>
                     </div>
                     <div class="setting">
                         <label for="url">Device URL</label>
-                        <input disabled=true name="url" type="text" autocorrect="off" autocapitalize="none"/>
+                        <input name="url" type="text" autocorrect="off" autocapitalize="none"/>
                     </div>
                     <div class='setting'>
                         <label for="dnssrv">Server</label>
@@ -182,21 +193,25 @@
                     </div>
                     <div class="setting">
                         <label for='updatesrv'>Update Server</label>
-                        <input disabled=true name="updatesrv" type="text" autocorrect="off" autocapitalize="none"/>
+                        <input name="updatesrv" type="text" autocorrect="off" autocapitalize="none"/>
                     </div>
+                    <div class="setting">
+                        <label>Version</label><div id="version"></div>
+                    </div>
+                    <br>
                     <div>
-                        <button class="txtbtn">Submit</button>
+                        <button class="txtbtn" id="savebtn" onclick=saveSettings()>Save</button>
                     </div>
-                </form>
-                <div>
-                    <button class="txtbtn" onclick='updateFirmware()'>Update Firmware</button>
                 </div>
-                <div class='modal' id='modal'>
+                <div>
+                    <button class="txtbtn" id="updateButton" onclick='updateFirmware()'>Update Firmware</button>
+                </div>
+                <div class='modal' id='updateModal'>
                     <div class="modal-content">
                         <p>Updating firmware, this may take a few minutes...</p>
                         <div class="loader"></div>
                         <br><br>
-                        <button class="txtbtn altbtn" onclick='cancelUpdate()'>Cancel</button>
+                        
                     </div>
                 </div>
             </div>
@@ -207,13 +222,117 @@
     </body>
 </html>
 <script>
-    var interval_handle
-    window.onload = function(){
-        getCurrentServer();
-        getBlockingStatus();
-    } 
+    var err = document.getElementById('error');
+    var version = document.getElementById("version");
+    var updatesrv = document.getElementsByName("updatesrv")[0];
+    var dnssrv = document.getElementsByName("dnssrv")[0];
+    var url = document.getElementsByName("url")[0];
+    var ip = document.getElementsByName("ip")[0];
+    var confirmModal = document.getElementById("confirmModal");
+    var updateButton = document.getElementById("updateButton");
+    var updateModal = document.getElementById("updateModal");
 
-    function upgradeFirmware(){
+    getSettings();
+    function getSettings() {
+        let http = new XMLHttpRequest();
+        http.open("GET", "settings.json");
+        http.send();
+
+        http.onreadystatechange = function(){
+            if (http.readyState == 4){
+                if (http.status == 200){
+                    let settings = JSON.parse(http.response);
+                    
+                    
+                    ip.value = settings.ip;
+
+                    
+                    url.value = settings.url;
+
+                    
+                    for(let j = 0; j < dnssrv.options.length; j++)
+                    {
+                        if (dnssrv.options[j].value == settings.dnssrv)
+                        {
+                            dnssrv.selectedIndex = j;
+                        }
+                    }
+
+                    
+                    updatesrv.value = settings.updatesrv;
+
+                    
+                    version.innerHTML = settings.version;
+                }
+                else{
+                    
+                    err.innerHTML = http.responseText;
+                    err.style.visibility = 'visible'
+                }
+            }
+        }
+    }
+
+    function saveSettings(){
+        let http = new XMLHttpRequest();
+        http.open("POST", "settings.json");
+
+        let data = {
+            ip: ip.value,
+            url: url.value,
+            dnssrv: dnssrv.value,
+            updatesrv: updatesrv.value
+        };
+
+        console.log(data)
+        http.setRequestHeader("Content-Type", "application/json");
+        http.send(JSON.stringify(data));
+
+        http.onreadystatechange = function() {
+            if (http.readyState == 4){
+                if (http.status == 200){
+                    window.location.href = '/settings';
+                }
+                else{
+                    let err = document.getElementById('error');
+                    err.innerHTML = http.responseText;
+                    err.style.visibility = 'visible'
+                }
+            }
+        }
+    }
+
+    function toggleBlockingStatus(){
+        let http = new XMLHttpRequest();
+        http.open("POST", "toggleblock");
+        http.send();
+
+        http.onreadystatechange = function() {
+            if (http.readyState == 4){
+                if (http.status == 200){
+                    let json = JSON.parse(http.response);
+                    let button = document.getElementById("blockStatus")
+                    if(json.blocking == false)
+                    {
+                        button.innerHTML = 'Blocking On';
+                        button.className = "";
+                    }
+                    else if (json.blocking == true)
+                    {
+                        button.className = "altbtn";
+                        button.innerHTML = 'Blocking Off';
+                    }
+                }
+                else{
+                    let err = document.getElementById('error');
+                    err.innerHTML = http.responseText;
+                    err.style.visibility = 'visible'
+                }
+            }
+        }
+    }
+
+    function updateFirmware(){
         let http = new XMLHttpRequest();
         http.open("POST", 'updatefirmware');
         http.send();
@@ -221,11 +340,8 @@
         http.onreadystatechange = function() {
             if (http.readyState == 4 && http.status == 200){
                 let modal = document.getElementById('modal')
-                modal.style.display = 'block';
+                updateModal.style.display = 'block';
                 interval_handle = setInterval(checkUpgradeStatus, 2000);
-            }
-            else{
-                button.disbled = false;
             }
         }
     }
@@ -233,7 +349,7 @@
     function checkUpgradeStatus(){
         console.log("Checking status...")
         let http = new XMLHttpRequest();
-        let url = 'upgradestatus';
+        let url = 'updatestatus';
         http.open("GET", url);
         http.send();
 
@@ -242,97 +358,8 @@
                 let response = http.responseText;
                 console.log(response)
                 if (response == 'done'){
-                    const http = new XMLHttpRequest();
-                    const url = 'restart';
-                    http.open("POST", url);
-                    http.send();
-                    clearInterval(interval_handle);
-                    setTimeout(function(){location.reload()}, 2000);
+                    window.location.href = '/settings'
                 }
-            }
-        }
-    }
-
-    function getBlockingStatus(){
-        console.log("Checking blocking status...")
-        let http = new XMLHttpRequest();
-        http.open("GET", "blockingstatus");
-        http.send();
-
-        http.onreadystatechange = function() {
-            if (http.readyState == 4) {
-                let button = document.getElementById("blockStatus");
-                if (http.status == 200){
-                    console.log(http.responseText);
-                    if(http.responseText == 'blocking on')
-                    {
-                        button.innerHTML = 'Blocking On';
-                        button.className = "";
-                        
-                    }
-                    else
-                    {
-                        button.className = "altbtn";
-                        button.innerHTML = 'Blocking Off';
-                        
-                    }
-                }
-            }
-        }
-    }
-
-    function toggleBlockingStatus(){
-        let http = new XMLHttpRequest();
-        http.open("POST", "blockingstatus");
-        http.send();
-
-        http.onreadystatechange = function() {
-            if (http.readyState == 4 && http.status == 200){
-                getBlockingStatus();
-            }
-        }
-    }
-
-    function getCurrentServer(){
-        let http = new XMLHttpRequest();
-        http.open("GET", "currentserver");
-        http.send();
-
-        http.onreadystatechange = function() {
-            if (http.readyState == 4) {
-                if (http.status == 200){
-                    console.log(http.responseText);
-                    let server = http.responseText;
-                    let dnssrv_select = document.getElementById('dnssrv');
-                    let options = dnssrv_select.options;
-
-                    for(let j = 0; j < options.length; j++)
-                    {
-                        if (options[j].value == server)
-                        {
-                            dnssrv_select.selectedIndex = j;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    function changeServer(){
-        server = document.getElementById('dnssrv').value;
-        console.log("Changing to " + server);
-
-        let http = new XMLHttpRequest();
-        http.open("POST", "server");
-        http.setRequestHeader('Content-Type','text/plain')
-        http.send(server);
-
-        http.onreadystatechange = function() {
-            if (http.readyState == 4 && http.status == 200){
-                console.log('success')
-            }
-            else{
-                console.log('error settings server')
             }
         }
     }

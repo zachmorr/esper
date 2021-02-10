@@ -81,11 +81,16 @@ static void apsta_ip_event_handler(void* arg, esp_event_base_t event_base,
 
             char ip[IP4ADDR_STRLEN_MAX];
             inet_ntop(AF_INET, &event->ip_info.ip, ip, IP4ADDR_STRLEN_MAX);
-            update_static_ip(ip);
+            nvs_set("ip", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
+            // update_static_ip(ip);
+            
             inet_ntop(AF_INET, &event->ip_info.netmask, ip, IP4ADDR_STRLEN_MAX);
-            update_netmask(ip);
+            nvs_set("nm", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
+            // update_netmask(ip);
+            
             inet_ntop(AF_INET, &event->ip_info.gw, ip, IP4ADDR_STRLEN_MAX);
-            update_gateway(ip);
+            nvs_set("gw", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
+            // update_gateway(ip);
 
             xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
             break;
@@ -194,12 +199,11 @@ static void store_scan_results()
     }
 }
 
-void get_scan_results(uint16_t* count, wifi_ap_record_t** list)
+uint16_t get_scan_results(wifi_ap_record_t** list)
 {
-    // Wait until scan if finished
     xEventGroupWaitBits(s_wifi_event_group, SCAN_FINISHED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
-    *count = ap_count;
-    *list = ap_list; 
+    *list = ap_list;
+    return ap_count;
 }
 
 void wifi_init_apsta()

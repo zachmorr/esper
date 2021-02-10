@@ -148,7 +148,7 @@ text-align: center;
 Add To Blacklist:
 <br>
 <input id="urlinput" type="text" autocorrect="off" autocapitalize="none" name='url' maxlength="255"/>
-<button id="submitbutton" class="txtbtn" onclick=sumbitURL()>Submit</button>
+<button id="submitbutton" class="txtbtn">Submit</button>
 </div>
 <table class="table" id='table'>
 <thead>
@@ -167,90 +167,78 @@ Add To Blacklist:
 </body>
 </html>
 <script>
-window.onload = loadBlacklist();
+let submitbutton = document.getElementById('submitbutton');
+let urlinput = document.getElementById('urlinput');
+submitbutton.onclick = function(){submitURL("add", urlinput.value)};
+loadBlacklist();
 
 function loadBlacklist() {
 const http = new XMLHttpRequest();
-http.open("GET", 'blacklist.txt');
+http.open("GET", 'blacklist.json');
 http.send();
 
 http.onreadystatechange = function() {
-if (http.readyState == 4)
-{
+if (http.readyState == 4){
 if (http.status == 200){
-var blacklist = http.responseText.split(/\n/);
-console.log(blacklist);
-let table = document.querySelector("table");
-generateTable(table, blacklist);
+generateTable(JSON.parse(http.response))
+}
+else if (http.status == 400){
+err.innerHTML = http.responseText;
+err.style.visibility = 'visible'
+}
+else if (http.status == 500){
+err.innerHTML = http.responseText;
+err.style.visibility = 'visible'
 }
 }
 }
 }
 
-function generateTable(table, blacklist) {
+function generateTable(data) {
 let tb = document.getElementsByTagName('tbody')[0];
 while(tb.firstChild)
 {
 tb.removeChild(tb.firstChild);
 }
 
-for (let i = 0; i < blacklist.length; i++){
-if (blacklist[i]) {
+for (let i = 0; i < data.blacklist.length; i++){
+let url = data.blacklist[i];
+
 let row = tb.insertRow();
 let domain = row.insertCell();
-domain.innerHTML = blacklist[i];
+domain.innerHTML = url;
 
 let button = document.createElement('button');
 button.innerHTML = '&times;';
-button.onclick = function(){removeURL(blacklist[i])};
+button.onclick = function(){submitURL("delete", url)};
 
 deleteDomain = row.insertCell();
-deleteDomain.appendChild(button)
-}
+deleteDomain.appendChild(button);
 }
 }
 
-function sumbitURL(){
-let req = new XMLHttpRequest();
-req.open('POST', '/blacklist/add');
-req.setRequestHeader('Content-Type','text/plain')
-urlinput = document.getElementById('urlinput');
-req.send(urlinput.value);
-urlinput.value = "";
+function submitURL(action, url){
+let http = new XMLHttpRequest();
+http.open('POST', '/blacklist/' + action);
+http.setRequestHeader('Content-Type','application/json')
+
+let data = { url: url };
+http.send(JSON.stringify(data));
 
 let err = document.getElementById('error');
 err.style.visibility = 'hidden'
 
-req.onreadystatechange = function(){handleResponse(req)};
-}
-
-function removeURL(url){
-let req = new XMLHttpRequest();
-req.open('POST', '/blacklist/delete');
-req.setRequestHeader('Content-Type','text/plain')
-req.send(url)
-
-let err = document.getElementById('error');
-err.style.visibility = 'hidden'
-
-req.onreadystatechange = function(){handleResponse(req)};
-}
-
-function handleResponse(req){
-if (req.readyState == 4)
-{
-if (req.status == 200)
-{
+http.onreadystatechange = function(){
+if (http.readyState == 4){
+if (http.status == 200){
 loadBlacklist();
 }
-else
-{
-console.log("Error: " + req.responseText);
-let err = document.getElementById('error');
-err.innerHTML = req.responseText;
+else{
+err.innerHTML = http.responseText;
 err.style.visibility = 'visible'
 }
 }
+};
 }
 </script>
 
