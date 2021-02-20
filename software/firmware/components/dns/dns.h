@@ -68,7 +68,7 @@ typedef struct
 } Client;
 
 esp_err_t initialize_upstream_socket();
-void start_dns();
+esp_err_t start_dns();
 IRAM_ATTR uint8_t parse_query(Packet* packet, DNS_Query* query);
 esp_err_t toggle_blocking();
 IRAM_ATTR bool blocking_on();

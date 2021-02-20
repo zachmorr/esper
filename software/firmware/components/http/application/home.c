@@ -160,14 +160,16 @@ static esp_err_t homepage_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-void setup_homepage_handlers(httpd_handle_t server){
+esp_err_t setup_homepage_handlers(httpd_handle_t server){
+    esp_err_t err;
+
     httpd_uri_t root = {
         .uri       = "/",
         .method    = HTTP_GET,
         .handler   = homepage_get_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root));
+    err = httpd_register_uri_handler(server, &root);
 
     httpd_uri_t homepage = {
         .uri       = "/homepage",
@@ -175,7 +177,7 @@ void setup_homepage_handlers(httpd_handle_t server){
         .handler   = homepage_get_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &homepage));
+    err |= httpd_register_uri_handler(server, &homepage);
 
     httpd_uri_t log_json = {
         .uri       = "/log.json",
@@ -183,5 +185,9 @@ void setup_homepage_handlers(httpd_handle_t server){
         .handler   = log_json_get_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &log_json));
+    err |= httpd_register_uri_handler(server, &log_json);
+    if( err != ESP_OK )
+        return ESP_FAIL;
+
+    return ESP_OK;
 }

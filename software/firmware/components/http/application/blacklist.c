@@ -218,14 +218,16 @@ static esp_err_t blacklist_delete_handler(httpd_req_t *req)
 }
 
 
-void setup_blacklist_handlers(httpd_handle_t server){
+esp_err_t setup_blacklist_handlers(httpd_handle_t server){
+    esp_err_t err;
+    
     httpd_uri_t blacklist = {
         .uri       = "/blacklist",
         .method    = HTTP_GET,
         .handler   = blacklist_get_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &blacklist));
+    err = httpd_register_uri_handler(server, &blacklist);
 
     httpd_uri_t blacklist_add = {
         .uri       = "/blacklist/add",
@@ -233,7 +235,7 @@ void setup_blacklist_handlers(httpd_handle_t server){
         .handler   = blacklist_add_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &blacklist_add));
+    err |= httpd_register_uri_handler(server, &blacklist_add);
 
     httpd_uri_t blacklist_delete = {
         .uri       = "/blacklist/delete",
@@ -241,7 +243,7 @@ void setup_blacklist_handlers(httpd_handle_t server){
         .handler   = blacklist_delete_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &blacklist_delete));
+    err |= httpd_register_uri_handler(server, &blacklist_delete);
 
     httpd_uri_t blacklist_json = {
         .uri       = "/blacklist.json",
@@ -249,5 +251,9 @@ void setup_blacklist_handlers(httpd_handle_t server){
         .handler   = blacklist_json_get_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &blacklist_json));
+    err |= httpd_register_uri_handler(server, &blacklist_json);
+
+    if( err != ESP_OK )
+        return ESP_FAIL;
+    return ESP_OK;
 }

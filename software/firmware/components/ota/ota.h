@@ -11,6 +11,7 @@ esp_err_t start_ota();
 TaskHandle_t get_ota_task_handle();
 esp_err_t delete_ota_task();
 esp_err_t start_update_checking_task();
+void check_for_update();
 bool is_update_available();
 
 #endif

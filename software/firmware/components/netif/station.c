@@ -101,50 +101,63 @@ static void sta_ip_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-static void init_ethernet()
+static esp_err_t init_ethernet()
 {
     ESP_LOGI(TAG, "Initializing Ethernet");
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
     eth_netif = esp_netif_new(&netif_cfg);
+    if( !eth_netif )
+        return ESP_FAIL;
 
     // Set default handlers to process TCP/IP stuffs
-    ESP_ERROR_CHECK(esp_eth_set_default_handlers(eth_netif));
+    esp_err_t err = esp_eth_set_default_handlers(eth_netif);
+    if( err != ESP_OK )
+        return err;
 
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
     phy_config.phy_addr = 0;
     phy_config.reset_gpio_num = -1;
     esp_eth_phy_t *phy = esp_eth_phy_new_lan8720(&phy_config);
+    if ( !phy )
+        return ESP_FAIL;
 
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
     mac_config.smi_mdc_gpio_num = 23;
     mac_config.smi_mdio_gpio_num = 18;
     esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_config);
+    if ( !mac )
+        return ESP_FAIL;
 
     esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
     eth_handle = NULL;
-    ESP_ERROR_CHECK(esp_eth_driver_install(&config, &eth_handle));
-
-    /* attach Ethernet driver to TCP/IP stack */
-    ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
+    err = esp_eth_driver_install(&config, &eth_handle);
+    err |= esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle));
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
     uint8_t mac_addr[6] = {0};
     esp_eth_ioctl(eth_handle, ETH_CMD_G_MAC_ADDR, mac_addr);
     ESP_LOGI(TAG, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
     mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    return ESP_OK;
 }
 
-static void init_wifi()
+static esp_err_t init_wifi()
 {
     ESP_LOGI(TAG, "Initializing Wifi");
 
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_WIFI_STA();
     wifi_netif = esp_netif_new(&netif_cfg);
-    assert(wifi_netif);
+    if( !wifi_netif )
+        return ESP_FAIL;
 
     esp_netif_attach_wifi_station(wifi_netif);
     esp_wifi_set_default_wifi_sta_handlers();
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&init_cfg));
+    esp_err_t err = esp_wifi_init(&init_cfg));
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
     uint8_t mac_addr[6];
     esp_wifi_get_mac(ESP_IF_WIFI_STA, mac_addr);
@@ -156,8 +169,12 @@ static void init_wifi()
     ESP_LOGI(TAG, "SSID: %s", wifi_config.ap.ssid);
     ESP_LOGI(TAG, "PASS: %s", wifi_config.ap.password);
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+    err = esp_wifi_set_mode(WIFI_MODE_STA);
+    err |= esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config);
+    if( err != ESP_OK )
+        return ESP_FAIL;
+
+    return ESP_OK;
 }
 
 esp_err_t set_network_info(){
@@ -191,8 +208,10 @@ esp_err_t set_network_info(){
     ip4addr_aton(upstream_server, (ip4_addr_t*)&dns.ip.u_addr.ip4);
     dns.ip.type = IPADDR_TYPE_V4;
     
-    esp_netif_set_dns_info(eth_netif, ESP_NETIF_DNS_MAIN, &dns);
-    esp_netif_set_dns_info(wifi_netif, ESP_NETIF_DNS_MAIN, &dns);
+    esp_err_t err = esp_netif_set_dns_info(eth_netif, ESP_NETIF_DNS_MAIN, &dns);
+    err |= esp_netif_set_dns_info(wifi_netif, ESP_NETIF_DNS_MAIN, &dns);
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
     return ESP_OK;
 }
@@ -201,19 +220,25 @@ esp_err_t wifi_init_sta()
 {
     ESP_LOGI(TAG, "Initializing Station");
 
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &sta_wifi_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &sta_eth_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &sta_ip_event_handler, NULL));
+    esp_err_t err;
+    err = esp_netif_init();
+    err |= esp_event_loop_create_default();
+    err |= esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &sta_wifi_event_handler, NULL);
+    err |= esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &sta_eth_event_handler, NULL);
+    err |= esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &sta_ip_event_handler, NULL);
+    if( err != ESP_OK )
+        return ESP_FAIL;
     
     netif_event_group = xEventGroupCreate();
-    init_ethernet();
-    init_wifi();
-    set_network_info();
-    esp_eth_start(eth_handle);
-    //esp_wifi_start();
+    err = init_ethernet();
+    err |= init_wifi();
+    err |= set_network_info();
+    err |= esp_eth_start(eth_handle);
+    //err |= esp_wifi_start();
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
+    // Wait for connection before returning
     EventBits_t bits = 0;
     while (!(bits & CONNECTED_BIT))
     {

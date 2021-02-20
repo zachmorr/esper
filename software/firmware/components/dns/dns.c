@@ -49,23 +49,24 @@ esp_err_t initialize_upstream_socket()
     nvs_get("upstream_server", (void*)upstream_server, IP4ADDR_STRLEN_MAX);
 
     xSemaphoreTake(dns_server_mutex, portMAX_DELAY);
+
     dns_server_addr.sin_family = PF_INET;
     dns_server_addr.sin_port = htons(DNS_PORT);
     ip4addr_aton(upstream_server, (ip4_addr_t *)&dns_server_addr.sin_addr.s_addr);
     ESP_LOGI(TAG, "DNS Server Address: %s", inet_ntoa(dns_server_addr.sin_addr.s_addr));
+
     xSemaphoreGive(dns_server_mutex);
 
     return ESP_OK;
 }
 
-static void initialize_socket()
+static esp_err_t initialize_socket()
 {
-    // Setup recv_sock
     ESP_LOGV(TAG, "Initializing Socket");
 	if((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
 		ESP_LOGW(TAG, "Failed To Create Socket");
-		esp_restart(); // ¯\_(ツ)_/¯ 
+		return ESP_FAIL;
 	}
 
     struct sockaddr_in my_addr;
@@ -76,9 +77,10 @@ static void initialize_socket()
     if(bind(sock, (struct sockaddr *)&my_addr, sizeof(my_addr)) < 0)
     {
     	ESP_LOGW(TAG, "Failed To Bind Socket");
-    	esp_restart(); // ¯\_(ツ)_/¯ 
+    	return ESP_FAIL;
     }
-    ESP_LOGD(TAG, "Socket %d created and bound on port %d", sock, DNS_PORT);
+
+    return ESP_OK;
 }
 
 static IRAM_ATTR void listening_task(void* paramerters)
@@ -362,19 +364,23 @@ static IRAM_ATTR void dns_task(void* nvs_h)
     }
 }
 
-void start_dns()
+esp_err_t start_dns()
 {
     ESP_LOGI(TAG, "Starting DNS Task");
     blocking_mutex = xSemaphoreCreateMutex();
     dns_server_mutex = xSemaphoreCreateMutex();
     packet_queue = xQueueCreate(PACKET_QUEUE_SIZE, sizeof(Packet));
 
-    initialize_socket();
-    initialize_upstream_socket();
-    set_device_url();
+    esp_err_t err = initialize_socket();
+    err |= initialize_upstream_socket();
+    err |= set_device_url();
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
-    xTaskCreatePinnedToCore(listening_task, "listening_task", 
-                            8000, NULL, 9, &listening, 1);
+    BaseType_t xErr = xTaskCreatePinnedToCore(listening_task, "listening_task", 8000, NULL, 9, &listening, 1);
+    xErr &= xTaskCreatePinnedToCore(dns_task, "dns_task", 16000, NULL, 9, &dns, 1);
+    if( xErr != pdPASS )
+        return ESP_FAIL;
 
-    xTaskCreatePinnedToCore(dns_task, "dns_task", 16000, NULL, 9, &dns, 1);
+    return ESP_OK;
 }

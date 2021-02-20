@@ -30,7 +30,7 @@ static const char *TAG = "GPIO";
 #define BUTTON_PIN 4
 
 static TaskHandle_t reset;
-static uint32_t current_state;
+static uint32_t current_state = 0;
 
 static void button_state_change(void* arg)
 {
@@ -77,11 +77,17 @@ static void button_task(void* args)
 
 esp_err_t initialize_gpio()
 {
+    esp_err_t err;
     gpio_pad_select_gpio(BUTTON_PIN);
-    ESP_ERROR_CHECK(gpio_set_direction(BUTTON_PIN, GPIO_MODE_DEF_INPUT));
-    ESP_ERROR_CHECK(gpio_set_pull_mode(BUTTON_PIN, GPIO_PULLUP_ONLY));
-    ESP_ERROR_CHECK(gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_ANYEDGE));
-    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    err = gpio_set_direction(BUTTON_PIN, GPIO_MODE_DEF_INPUT);
+    err |= gpio_set_pull_mode(BUTTON_PIN, GPIO_PULLUP_ONLY);
+    err |= gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_ANYEDGE);
+    err |= gpio_install_isr_service(0);
+    err |= gpio_isr_handler_add(BUTTON_PIN, button_state_change, NULL);
+
+    if (err != ESP_OK){
+        return IO_ERR_BUTTON_INIT;
+    }
 
     ledc_timer_config_t led_timer_config = {
         .speed_mode = LED_SPEED_MODE,
@@ -89,7 +95,7 @@ esp_err_t initialize_gpio()
         .freq_hz = 5000,
         .duty_resolution = LEDC_TIMER_10_BIT,
     };
-    ledc_timer_config(&led_timer_config);
+    err |= ledc_timer_config(&led_timer_config);
 
     ledc_channel_config_t led_channel_config_blue = {
         .gpio_num = BLUE_LED_NUM,
@@ -99,7 +105,7 @@ esp_err_t initialize_gpio()
         .timer_sel = LEDC_TIMER_0,
         .duty = 0,
     };
-    ledc_channel_config(&led_channel_config_blue);
+    err |= ledc_channel_config(&led_channel_config_blue);
 
     ledc_channel_config_t led_channel_config_red = {
         .gpio_num = RED_LED_NUM,
@@ -109,7 +115,7 @@ esp_err_t initialize_gpio()
         .timer_sel = LEDC_TIMER_0,
         .duty = 0,
     };
-    ledc_channel_config(&led_channel_config_red);
+    err |= ledc_channel_config(&led_channel_config_red);
 
     ledc_channel_config_t led_channel_config_green = {
         .gpio_num = GREEN_LED_NUM,
@@ -119,15 +125,14 @@ esp_err_t initialize_gpio()
         .timer_sel = LEDC_TIMER_0,
         .duty = 0,
     };
-    ledc_channel_config(&led_channel_config_green);
-    ledc_fade_func_install(0);
+    err |= ledc_channel_config(&led_channel_config_green);
+    err |= ledc_fade_func_install(0);
 
-    ESP_LOGI(TAG, "Listening for reset...");
-    ESP_ERROR_CHECK(gpio_isr_handler_add(BUTTON_PIN, button_state_change, NULL));
-    xTaskCreatePinnedToCore(button_task, "button_task", 3000, NULL, 2, 
-                            &reset, tskNO_AFFINITY);
+    if (err != ESP_OK){
+        return IO_ERR_LED_INIT;
+    }
 
-    current_state = 0;
+    xTaskCreatePinnedToCore(button_task, "button_task", 3000, NULL, 2, &reset, tskNO_AFFINITY);
     ESP_LOGI(TAG, "GPIO Initialized");
     return ESP_OK;
 }

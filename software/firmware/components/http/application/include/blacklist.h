@@ -3,7 +3,7 @@
 
 #include <esp_http_server.h>
 
-void setup_blacklist_handlers(httpd_handle_t server);
+esp_err_t setup_blacklist_handlers(httpd_handle_t server);
 
 #endif
 

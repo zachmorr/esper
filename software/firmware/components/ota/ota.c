@@ -23,6 +23,7 @@ static const char *TAG = "OTA";
 #define UPDATE_CHECK_INTERVAL_S 3600
 
 static TaskHandle_t ota_task_handle = NULL;
+static TaskHandle_t update_check_handle = NULL;
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 static bool update_available = false;
 
@@ -50,6 +51,8 @@ static void check_for_update_task(void *pvParameter)
 {
     while(1)
     {
+        xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
+        
         char updatesrv[MAX_URL_LENGTH+CONFIG_HTTPD_MAX_URI_LEN];
         nvs_get("update_server", (void*)updatesrv, 0);
         esp_http_client_config_t config = {
@@ -116,8 +119,12 @@ static void check_for_update_task(void *pvParameter)
         }
         esp_http_client_close(client);
         esp_http_client_cleanup(client);
-        vTaskDelay(UPDATE_CHECK_INTERVAL_S*1000/portTICK_PERIOD_MS);
     }
+}
+
+void check_for_update()
+{
+    xTaskNotify(update_check_handle, 1, eSetValueWithoutOverwrite);
 }
 
 static void ota_task(void *pvParameter)
@@ -293,13 +300,16 @@ TaskHandle_t get_ota_task_handle()
 }
 
 esp_err_t start_ota(){
-    xTaskCreatePinnedToCore(&ota_task, "ota_task", 
-                            8192, NULL, 5, &ota_task_handle, 0);
+    xTaskCreatePinnedToCore(&ota_task, "ota_task", 8192, NULL, 5, &ota_task_handle, 0);
     return ESP_OK;
 }
 
 esp_err_t start_update_checking_task(){
-    ESP_LOGI(TAG, "Starting update checker task");
-    xTaskCreatePinnedToCore(&check_for_update_task, "update_check_task", 8192, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(&check_for_update_task, "update_check_task", 8192, NULL, 5, &update_check_handle, 0);
+    check_for_update();
+
+    xTimerHandle updateCheckTimer = xTimerCreate("Check for update", pdMS_TO_TICKS(1000*60*60), pdTRUE, (void*)0, check_for_update);
+    xTimerStart(updateCheckTimer, 0);
+
     return ESP_OK;
 }

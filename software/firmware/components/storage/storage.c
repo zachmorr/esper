@@ -58,12 +58,19 @@ esp_err_t initialize_storage()
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_LOGE(TAG, "Error initializing flash");
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
+        err = nvs_flash_erase();
+        if (err == ESP_OK){
+            err = nvs_flash_init();
+        }
     }
-    ESP_ERROR_CHECK(err);
 
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs));
+    if (err != ESP_OK){
+        return err;
+    }
+
+    if ( (err = nvs_open("storage", NVS_READWRITE, &nvs)) != ESP_OK )
+        return err;
+        
     ESP_LOGD(TAG, "Flash Initialized");
 
     ESP_LOGI(TAG, "Initializing SPIFFS");
@@ -124,18 +131,8 @@ esp_err_t reset_device()
     return err;
 }
 
-bool check_configuration_status()
+esp_err_t check_configuration_status(bool* configured)
 {
     ESP_LOGD(TAG, "Reading config_status");
-
-    uint8_t config_status;
-    esp_err_t err = nvs_get("config_status", (void*)&config_status, sizeof(config_status));
-
-    if (err)
-    {
-        ESP_LOGE(TAG, "NVS Read Returned: %s", esp_err_to_name(err));
-        return false;
-    }
-    else
-        return (bool)config_status;
+    return nvs_get("config_status", (void*)configured, sizeof(*configured));
 }

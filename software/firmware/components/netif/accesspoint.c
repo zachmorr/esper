@@ -82,15 +82,12 @@ static void apsta_ip_event_handler(void* arg, esp_event_base_t event_base,
             char ip[IP4ADDR_STRLEN_MAX];
             inet_ntop(AF_INET, &event->ip_info.ip, ip, IP4ADDR_STRLEN_MAX);
             nvs_set("ip", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
-            // update_static_ip(ip);
             
             inet_ntop(AF_INET, &event->ip_info.netmask, ip, IP4ADDR_STRLEN_MAX);
             nvs_set("nm", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
-            // update_netmask(ip);
             
             inet_ntop(AF_INET, &event->ip_info.gw, ip, IP4ADDR_STRLEN_MAX);
             nvs_set("gw", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
-            // update_gateway(ip);
 
             xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
             break;
@@ -134,7 +131,7 @@ bool test_authentication()
     return false;
 }
 
-void start_wifi_scan()
+esp_err_t start_wifi_scan()
 {
     static wifi_scan_config_t scanConf = {
         .ssid = NULL,
@@ -152,7 +149,9 @@ void start_wifi_scan()
     if(err != ESP_OK )
     {
         ESP_LOGD(TAG, "Problem starting scan, error code %d", err);
+        return ESP_FAIL;
     }
+    return ESP_OK;
 }
 
 static void store_scan_results()
@@ -206,20 +205,24 @@ uint16_t get_scan_results(wifi_ap_record_t** list)
     return ap_count;
 }
 
-void wifi_init_apsta()
+esp_err_t wifi_init_apsta()
 {
     s_wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &apsta_wifi_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &apsta_ip_event_handler, NULL));
+    esp_err_t err = esp_netif_init();
+    err |= esp_event_loop_create_default();
+    err |= esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &apsta_wifi_event_handler, NULL);
+    err |= esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &apsta_ip_event_handler, NULL);
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
     esp_netif_create_default_wifi_sta();
     esp_netif_create_default_wifi_ap();
 
     wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    ESP_ERROR_CHECK(esp_wifi_init(&wifi_cfg));
+    err = esp_wifi_init(&wifi_cfg);
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
     wifi_config_t wifi_config = {
         .ap = {
@@ -235,12 +238,18 @@ void wifi_init_apsta()
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
     }
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    err = esp_wifi_set_mode(WIFI_MODE_APSTA);
+    err |= esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
+    err |= esp_wifi_start();
+    if( err != ESP_OK )
+        return ESP_FAIL;
 
     ESP_LOGI(TAG, "wifi_init_apsta finished.SSID:%s password:%s", AP_SSID, AP_PASS);
 
-    start_wifi_scan();
+    err = start_wifi_scan();
+    if( err != ESP_OK )
+        return ESP_FAIL;
+        
+    return ESP_OK;
 }
 

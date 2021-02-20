@@ -3,6 +3,9 @@
 
 #include <esp_system.h>
 
+#define IO_ERR_BUTTON_INIT 0x300
+#define IO_ERR_LED_INIT 0x301
+
 enum state {
     STARTUP,
     CONFIGURING,

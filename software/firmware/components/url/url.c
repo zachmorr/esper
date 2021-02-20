@@ -138,9 +138,7 @@ esp_err_t initialize_blocklists()
 {
     blacklist_mutex = xSemaphoreCreateMutex();
 
-    ESP_ERROR_CHECK(reload_blacklist());
-
-    return ESP_OK;
+    return reload_blacklist();
 }
 
 bool valid_url(URL url)
