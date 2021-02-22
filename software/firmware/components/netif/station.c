@@ -59,6 +59,7 @@ static void sta_wifi_event_handler(void* arg, esp_event_base_t event_base,
 static void sta_eth_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data)
 {
+
     switch (event_id) {
         case ETHERNET_EVENT_CONNECTED:
             ESP_LOGI(TAG, "ETHERNET_EVENT_CONNECTED");
@@ -155,7 +156,7 @@ static esp_err_t init_wifi()
     esp_netif_attach_wifi_station(wifi_netif);
     esp_wifi_set_default_wifi_sta_handlers();
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
-    esp_err_t err = esp_wifi_init(&init_cfg));
+    esp_err_t err = esp_wifi_init(&init_cfg);
     if( err != ESP_OK )
         return ESP_FAIL;
 
@@ -184,18 +185,14 @@ esp_err_t set_network_info(){
 
     esp_netif_ip_info_t ip_info;
     char ip[IP4ADDR_STRLEN_MAX+1] = {0};
-    ESP_LOGI(TAG, "Network Info:");
 
     nvs_get("nm", (void*)ip, IP4ADDR_STRLEN_MAX);
-    ESP_LOGI(TAG, "Netmask: %s", ip);
     inet_pton(AF_INET, ip, &ip_info.netmask);
 
     nvs_get("gw", (void*)ip, IP4ADDR_STRLEN_MAX);
-    ESP_LOGI(TAG, "Gateway: %s", ip);
     inet_pton(AF_INET, ip, &ip_info.gw);
 
     nvs_get("ip", (void*)ip, IP4ADDR_STRLEN_MAX);
-    ESP_LOGI(TAG, "Static IP:%s", ip);
     inet_pton(AF_INET, ip, &ip_info.ip);
 
     esp_netif_set_ip_info(eth_netif, &ip_info);

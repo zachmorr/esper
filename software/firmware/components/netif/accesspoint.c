@@ -212,8 +212,9 @@ esp_err_t wifi_init_apsta()
     err |= esp_event_loop_create_default();
     err |= esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &apsta_wifi_event_handler, NULL);
     err |= esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &apsta_ip_event_handler, NULL);
-    if( err != ESP_OK )
+    if( err != ESP_OK ){
         return ESP_FAIL;
+    }
 
     esp_netif_create_default_wifi_sta();
     esp_netif_create_default_wifi_ap();
@@ -221,8 +222,9 @@ esp_err_t wifi_init_apsta()
     wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
     err = esp_wifi_init(&wifi_cfg);
-    if( err != ESP_OK )
+    if( err != ESP_OK ){
         return ESP_FAIL;
+    }
 
     wifi_config_t wifi_config = {
         .ap = {
@@ -241,14 +243,16 @@ esp_err_t wifi_init_apsta()
     err = esp_wifi_set_mode(WIFI_MODE_APSTA);
     err |= esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
     err |= esp_wifi_start();
-    if( err != ESP_OK )
+    if( err != ESP_OK ){
         return ESP_FAIL;
+    }
 
     ESP_LOGI(TAG, "wifi_init_apsta finished.SSID:%s password:%s", AP_SSID, AP_PASS);
 
     err = start_wifi_scan();
-    if( err != ESP_OK )
+    if( err != ESP_OK ){
         return ESP_FAIL;
+    }
         
     return ESP_OK;
 }

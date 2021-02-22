@@ -24,8 +24,8 @@ void app_main()
 {
     // esp_log_level_set("heap_init", ESP_LOG_ERROR);
     // esp_log_level_set("spi_flash", ESP_LOG_ERROR);
-    // esp_log_level_set("wifi", ESP_LOG_ERROR);
-    // esp_log_level_set("wifi_init", ESP_LOG_ERROR);
+    esp_log_level_set("wifi", ESP_LOG_ERROR);
+    esp_log_level_set("wifi_init", ESP_LOG_ERROR);
     // esp_log_level_set("phy", ESP_LOG_ERROR); 
     // esp_log_level_set("esp_netif_handlers", ESP_LOG_ERROR);
     // esp_log_level_set("system_api", ESP_LOG_ERROR);
@@ -37,17 +37,21 @@ void app_main()
     ERROR_CHECK(err, set_led_state(STARTUP, SET))
     ERROR_CHECK(err, initialize_storage())
 
+    nvs_set("ip", (void*)"192.168.2.60", (size_t)IP4ADDR_STRLEN_MAX);
+    nvs_set("nm", (void*)"255.255.255.0", (size_t)IP4ADDR_STRLEN_MAX);
+    nvs_set("gw", (void*)"192.168.2.1", (size_t)IP4ADDR_STRLEN_MAX);
+
     bool configured;
-    ERROR_CHECK(err, check_configuration_status(configured))
+    ERROR_CHECK(err, check_configuration_status(&configured))
     if(configured)
     {
         ESP_LOGI(TAG, "Already configured, starting application...");
         ERROR_CHECK(err, initialize_blocklists())
         ERROR_CHECK(err, initialize_logging())
         ERROR_CHECK(err, wifi_init_sta())
+        ERROR_CHECK(err, start_application_webserver())
         ERROR_CHECK(err, initialize_sntp())
         ERROR_CHECK(err, start_dns())
-        ERROR_CHECK(err, start_application_webserver())
         start_update_checking_task();
         set_led_state(STARTUP, CLEAR);
         set_led_state(BLOCKING, SET);
@@ -56,8 +60,8 @@ void app_main()
     {
         ESP_LOGI(TAG, "Not configured, starting wifi provisioning...");
         ERROR_CHECK(err, wifi_init_apsta())
-        start_captive_dns();
-        start_configuration_webserver();
+        ERROR_CHECK(err, start_captive_dns())
+        ERROR_CHECK(err, start_configuration_webserver())
         set_led_state(STARTUP, CLEAR);
         set_led_state(CONFIGURING, SET);
     }

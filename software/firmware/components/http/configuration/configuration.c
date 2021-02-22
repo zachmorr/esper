@@ -41,7 +41,7 @@ static esp_err_t configure_captive_portal_handlers(httpd_handle_t server)
         .handler   = apple_captive_portal_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &apple_captive_portal));
+    esp_err_t err = httpd_register_uri_handler(server, &apple_captive_portal);
 
     httpd_uri_t windows10_captive_portal = {
         .uri       = windows10_hotspot_detect,
@@ -49,12 +49,16 @@ static esp_err_t configure_captive_portal_handlers(httpd_handle_t server)
         .handler   = windows10_captive_portal_handler,
         .user_ctx  = ""
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &windows10_captive_portal));
+    err |= httpd_register_uri_handler(server, &windows10_captive_portal);
+
+    if (err != ESP_OK ){
+        return ESP_FAIL;
+    }
 
     return ESP_OK;
 }
 
-void start_configuration_webserver()
+esp_err_t start_configuration_webserver()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn = httpd_uri_match_wildcard;
@@ -63,11 +67,16 @@ void start_configuration_webserver()
     ESP_LOGI(TAG, "Starting HTTP server");
     ESP_ERROR_CHECK(httpd_start(&server, &config));
 
-    configure_captive_portal_handlers(server);
-    configure_wifi_select_handler(server);
-    configure_connected_handler(server);
+    esp_err_t err = configure_captive_portal_handlers(server);
+    err |= configure_wifi_select_handler(server);
+    err |= configure_connected_handler(server);
+
+    if( err != ESP_OK ){
+        return ESP_FAIL;
+    }
 
     ESP_LOGI(TAG, "Ready to serve configuration page");
+    return ESP_OK;
 }
 
 void stop_configuration_webserver()

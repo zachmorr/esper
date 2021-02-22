@@ -114,8 +114,10 @@ static void captive_dns_task(void* parameters)
     }
 }
 
-void start_captive_dns()
+esp_err_t start_captive_dns()
 {
     xTaskCreatePinnedToCore(captive_dns_task, "captive_dns_task", 8000, NULL, 5, 
                             &captive_dns, tskNO_AFFINITY);
+    
+    return ESP_OK;
 }

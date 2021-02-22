@@ -3,7 +3,7 @@
 
 #include <esp_http_server.h>
 
-void start_configuration_webserver();
+esp_err_t start_configuration_webserver();
 void stop_configuration_webserver();
 
 #endif

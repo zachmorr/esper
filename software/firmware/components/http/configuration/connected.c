@@ -24,8 +24,8 @@ static esp_err_t connection_json_get_handler(httpd_req_t *req)
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
     cJSON_AddStringToObject(connection, "ssid", (char*)wifi_config.ap.ssid);
 
-    char ip[IP4ADDR_STRLEN_MAX];
-    nvs_get("ip", (void*)ip, IP4ADDR_STRLEN_MAX);
+    char ip[16];
+    nvs_get("ip", (void*)ip, 16);
     cJSON_AddStringToObject(connection, "ip", ip);
 
     httpd_resp_sendstr(req, cJSON_Print(connection));

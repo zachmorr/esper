@@ -117,10 +117,11 @@ esp_err_t set_defaults()
     uint8_t conf_status = 1;
     err |= nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
 
-    if (err)
+    if (err){
         return ESP_FAIL;
-    else
+    } else {
         return ESP_OK;
+    }
 }
 
 esp_err_t reset_device()

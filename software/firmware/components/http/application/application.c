@@ -11,7 +11,7 @@ static const char *TAG = "HTTP";
 static httpd_handle_t server;
 
 
-void start_application_webserver()
+esp_err_t start_application_webserver()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn = httpd_uri_match_wildcard;

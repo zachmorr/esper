@@ -29,6 +29,8 @@ Analytics
     most blocked/queried websites
 DATETIME
     Add timezone select
+CONFIGURATION
+    Look into wifi_provisioning library
 DNS
     better client handling
         print error if client never got response
