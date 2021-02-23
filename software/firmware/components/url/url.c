@@ -114,25 +114,25 @@ esp_err_t remove_from_blacklist(URL removal)
         return URL_ERR_NOT_FOUND;
 }
 
-esp_err_t store_default_lists()
-{
-    ESP_LOGI(TAG, "Saving Blacklist");
-    FILE* b = fopen("/spiffs/blacklist", "w");
-    if(b == NULL)
-    {
-        ESP_LOGE(TAG, "Error opening blacklist file");
-        return ESP_FAIL;
-    }
+// esp_err_t store_default_lists()
+// {
+//     ESP_LOGI(TAG, "Saving Blacklist");
+//     FILE* b = fopen("/spiffs/blacklist", "w");
+//     if(b == NULL)
+//     {
+//         ESP_LOGE(TAG, "Error opening blacklist file");
+//         return ESP_FAIL;
+//     }
 
-    extern const unsigned char blacklist_txt_start[] asm("_binary_default_blacklist_txt_start");
-    extern const unsigned char blacklist_txt_end[]   asm("_binary_default_blacklist_txt_end");
-    const size_t blacklist_txt_size = (blacklist_txt_end - blacklist_txt_start);
+//     extern const unsigned char blacklist_txt_start[] asm("_binary_default_blacklist_txt_start");
+//     extern const unsigned char blacklist_txt_end[]   asm("_binary_default_blacklist_txt_end");
+//     const size_t blacklist_txt_size = (blacklist_txt_end - blacklist_txt_start);
 
-    fwrite(blacklist_txt_start, blacklist_txt_size, 1, b);
-    fclose(b);
+//     fwrite(blacklist_txt_start, blacklist_txt_size, 1, b);
+//     fclose(b);
 
-    return ESP_OK;
-}
+//     return ESP_OK;
+// }
 
 esp_err_t initialize_blocklists()
 {

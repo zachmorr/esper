@@ -1,5 +1,5 @@
 #include "dns.h"
-#include "storage.h"
+#include "flash.h"
 #include "url.h"
 #include "logging.h"
 #include "datetime.h"

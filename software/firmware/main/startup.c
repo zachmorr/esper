@@ -1,4 +1,4 @@
-#include "storage.h"
+#include "flash.h"
 #include "logging.h"
 #include "datetime.h"
 #include "gpio.h"
@@ -35,7 +35,7 @@ void app_main()
     esp_err_t err;
     ERROR_CHECK(err, initialize_gpio())
     ERROR_CHECK(err, set_led_state(STARTUP, SET))
-    ERROR_CHECK(err, initialize_storage())
+    ERROR_CHECK(err, initialize_flash())
 
     nvs_set("ip", (void*)"192.168.2.60", (size_t)IP4ADDR_STRLEN_MAX);
     nvs_set("nm", (void*)"255.255.255.0", (size_t)IP4ADDR_STRLEN_MAX);

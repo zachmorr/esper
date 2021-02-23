@@ -48,7 +48,7 @@ WEBSITE
 BLACKLIST
     Handling reload_blacklist() errors
     Benchmark speed improvement from keeping blacklist in RAM instead of flash
-STORAGE
+FLASH
     Handle flash errors
     Document what is being held in flash
 OTHER

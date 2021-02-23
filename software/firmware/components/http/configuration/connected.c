@@ -1,5 +1,5 @@
 #include "connected.h"
-#include "storage.h"
+#include "flash.h"
 #include "url.h"
 #include "logging.h"
 #include "esp_wifi.h"
@@ -63,17 +63,17 @@ static esp_err_t finish_setup_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    if (create_log_file() != ESP_OK)
-    {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable allocate space for log file");
-        return ESP_OK;
-    }
+    // if (create_log_file() != ESP_OK)
+    // {
+    //     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable allocate space for log file");
+    //     return ESP_OK;
+    // }
 
-    if (set_defaults() != ESP_OK)
-    {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to set default settings");
-        return ESP_OK;
-    }
+    // if (set_defaults() != ESP_OK)
+    // {
+    //     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to set default settings");
+    //     return ESP_OK;
+    // }
 
     ESP_LOGI(TAG, "Configuration finished");
     xTimerHandle restartTimer = xTimerCreate("Restart timer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, restart);

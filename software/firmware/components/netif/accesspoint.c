@@ -1,5 +1,5 @@
 #include "accesspoint.h"
-#include "storage.h"
+#include "flash.h"
 
 #include <string.h>
 

@@ -69,7 +69,6 @@ menu "Application Configuration"
             default 0
             help
                 Set PHY address according your board schematic.
-
     endif # ETHERNET_ENABLE
 
     menuconfig WIFI_ENABLE
@@ -91,7 +90,6 @@ menu "Application Configuration"
 
             config SSID
                 string "SSID"
-
         endif # PROVISION_ENABLE
     endif # WIFI_ENABLE
  
@@ -121,7 +119,32 @@ menu "Application Configuration"
             int "Button GPIO number"
             range 0 35
             default 34
-
     endif # GPIO_ENABLE
- 
+
+    choice DEFAULT_UPSTREAM_DNS
+        prompt "Default Upstream DNS"
+        default UPSTREAM_DNS_CLOUDFARE
+        help
+            Select which provider to use for DNS
+
+        config UPSTREAM_DNS_GOOGLE
+            bool "Google"
+
+        config UPSTREAM_DNS_CLOUDFARE
+            bool "Cloudfare"
+
+        config UPSTREAM_DNS_OPENDNS
+            bool "OpenDNS"
+
+        config UPSTREAM_DNS_ADGUARD
+            bool "AdGuard"
+    endchoice
+
+    config DEFAULT_DEVICE_URL
+        string "Default device url"
+        default "esper.com"
+
+    config DEFAULT_UPDATE_URI
+        string "Default update uri"
+        default "openesper.com/OpenEsper.bin"
 endmenu

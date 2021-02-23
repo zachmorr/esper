@@ -1,5 +1,5 @@
 #include "gpio.h"
-#include "storage.h"
+#include "flash.h"
 #include "dns.h"
 
 #include "freertos/FreeRTOS.h"

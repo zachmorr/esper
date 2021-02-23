@@ -39,5 +39,6 @@
     "json.h": "c",
     "esp_ota_ops.h": "c",
     "esp_http_server.h": "c"
-  }
+  },
+  "cmake.configureOnOpen": false
 }

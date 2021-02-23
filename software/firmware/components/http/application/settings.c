@@ -1,7 +1,7 @@
 #include "settings.h"
 #include "dns.h"
 #include "ota.h"
-#include "storage.h"
+#include "flash.h"
 #include "station.h"
 #include "url.h"
 #include "cJSON.h"
@@ -55,7 +55,7 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "dnssrv", dnssrv);
 
     char updatesrv[MAX_URL_LENGTH+HTTPD_MAX_URI_LEN];
-    nvs_get("update_server", (void*)updatesrv, 0);
+    nvs_get("update_url", (void*)updatesrv, 0);
     cJSON_AddStringToObject(json, "updatesrv", updatesrv);
     
     const esp_app_desc_t* firmware = esp_ota_get_app_description();
@@ -76,7 +76,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "%d %s %d", req->method, req->uri, req->content_len);
 
-    if ( req->content_len > (MAX_URL_LENGTH*2+HTTPD_MAX_URI_LEN+IP4ADDR_STRLEN_MAX*2+100) )
+    if ( req->content_len > (MAX_URL_LENGTH*2+CONFIG_HTTPD_MAX_URI_LEN+IP4ADDR_STRLEN_MAX*2+100) )
     {
         ESP_LOGW(TAG, "Could not add, URL too long");
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Content length too large");
@@ -141,7 +141,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "updatesrv: %s", updatesrv->valuestring);
-    nvs_set("update_server", (void*)updatesrv->valuestring, strlen(updatesrv->valuestring)+1);
+    nvs_set("update_url", (void*)updatesrv->valuestring, strlen(updatesrv->valuestring)+1);
 
     // Reload things that rely on one of the settings
     set_network_info();
