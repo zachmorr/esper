@@ -12,6 +12,7 @@
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 #include "lwip/ip_addr.h"
+#include "esp_netif.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
@@ -171,11 +172,14 @@ static IRAM_ATTR esp_err_t redirect_response(DNS_Header* header, Packet* packet,
         memcpy(answer_packet, packet->data, packet->length);
         memcpy(answer_packet+packet->length, ip4_redirect_response, A_RECORD_ANSWER_SIZE-4);
 
-        struct in_addr ip;
-        char ip_str[IP4ADDR_STRLEN_MAX];
-        nvs_get("ip", (void*)ip_str, IP4ADDR_STRLEN_MAX);
-        inet_pton(AF_INET, ip_str, &ip);
-        memcpy(answer_packet+packet->length+sizeof(ip4_redirect_response)-1, &ip.s_addr, 4);
+        // struct in_addr ip;
+        // char ip_str[IP4ADDR_STRLEN_MAX];
+        // nvs_get("ip", (void*)ip_str, IP4ADDR_STRLEN_MAX);
+        // inet_pton(AF_INET, ip_str, &ip);
+        // memcpy(answer_packet+packet->length+sizeof(ip4_redirect_response)-1, &ip.s_addr, 4);
+        esp_netif_ip_info_t info;
+        get_network_info(&info);
+        memcpy(answer_packet+packet->length+sizeof(ip4_redirect_response)-1, &info.ip, 4);
 
         len = packet->length+A_RECORD_ANSWER_SIZE;
         ESP_LOGD(TAG, "Sending fake A record");

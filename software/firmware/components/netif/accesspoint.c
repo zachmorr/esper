@@ -78,16 +78,17 @@ static void apsta_ip_event_handler(void* arg, esp_event_base_t event_base,
     switch(event_id) {
         case IP_EVENT_STA_GOT_IP:
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP");
+            set_network_info(event->ip_info);
 
-            char ip[IP4ADDR_STRLEN_MAX];
-            inet_ntop(AF_INET, &event->ip_info.ip, ip, IP4ADDR_STRLEN_MAX);
-            nvs_set("ip", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
+            // char ip[IP4ADDR_STRLEN_MAX];
+            // inet_ntop(AF_INET, &event->ip_info.ip, ip, IP4ADDR_STRLEN_MAX);
+            // nvs_set("ip", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
             
-            inet_ntop(AF_INET, &event->ip_info.netmask, ip, IP4ADDR_STRLEN_MAX);
-            nvs_set("nm", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
+            // inet_ntop(AF_INET, &event->ip_info.netmask, ip, IP4ADDR_STRLEN_MAX);
+            // nvs_set("nm", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
             
-            inet_ntop(AF_INET, &event->ip_info.gw, ip, IP4ADDR_STRLEN_MAX);
-            nvs_set("gw", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
+            // inet_ntop(AF_INET, &event->ip_info.gw, ip, IP4ADDR_STRLEN_MAX);
+            // nvs_set("gw", (void*)ip, (size_t)IP4ADDR_STRLEN_MAX);
 
             xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
             break;

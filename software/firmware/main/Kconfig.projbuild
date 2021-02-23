@@ -78,19 +78,43 @@ menu "Application Configuration"
             Turn wifi on
 
     if WIFI_ENABLE
-        config PROVISION_ENABLE
-            bool "Enable Provisioning"
-            default "y"
+        config PROVISION_DISABLE
+            bool "Disable Provisioning"
+            default n
             help
                 Turn wifi on
 
-        if !PROVISION_ENABLE
+        if !PROVISION_DISABLE
+            config AP_SSID
+                string "Access Point SSID"
+                default "Esper"
+
+            config AP_PASSWORD
+                string "Access Point Password"
+                default ""
+
+            config AP_CONNECTIONS
+                int "Max Access Point Connections"
+                default 1
+        endif # !PROVISION_DISABLE
+
+        if PROVISION_DISABLE
+            config SSID
+                string "SSID"
+
             config PASSWORD
                 string "Password"
 
-            config SSID
-                string "SSID"
-        endif # PROVISION_ENABLE
+            config IP
+                string "IP Address"
+
+            config GW
+                string "Gateway"
+
+            config NM
+                string "Netmask"
+
+        endif # PROVISION_DISABLE
     endif # WIFI_ENABLE
  
     menuconfig GPIO_ENABLE

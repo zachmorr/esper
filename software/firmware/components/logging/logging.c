@@ -57,10 +57,11 @@ esp_err_t log_query(URL url, bool blocked, uint32_t client)
 static void logging_task(void* args)
 {
     // get_log_values(&log_head, &full_flag);
-    esp_err_t head_err = nvs_get("log_head", (void*)&log_head, sizeof(log_head));
-    esp_err_t flag_err = nvs_get("full_flag", (void*)&full_flag, sizeof(full_flag));
+    // esp_err_t head_err = nvs_get("log_head", (void*)&log_head, sizeof(log_head));
+    // esp_err_t flag_err = nvs_get("full_flag", (void*)&full_flag, sizeof(full_flag));
+    esp_err_t err = get_log_data(&log_head, &full_flag);
 
-    if (head_err != ESP_OK || flag_err != ESP_OK)
+    if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Error getting log buffer info, logging disabled");
         while(1){ vTaskDelay(10000 / portTICK_PERIOD_MS); }
@@ -106,9 +107,9 @@ static void logging_task(void* args)
 
                         if(fwrite(&entry, sizeof(Log_Entry), 1, log))
                         {
-                            // update_log_values(log_head, full_flag);
-                            nvs_set("log_head", (void*)&log_head, sizeof(log_head));
-                            nvs_set("full_flag", (void*)&full_flag, sizeof(full_flag));
+                            update_log_data(log_head, full_flag);
+                            // nvs_set("log_head", (void*)&log_head, sizeof(log_head));
+                            // nvs_set("full_flag", (void*)&full_flag, sizeof(full_flag));
                         }
                         else
                         {
@@ -129,34 +130,34 @@ static void logging_task(void* args)
     }
 }
 
-// esp_err_t create_log_file()
-// {
-//     ESP_LOGI(TAG, "Creating log file");
-//     FILE* log = fopen("/spiffs/log", "w");
-//     if (log)
-//     {
-//         // ftruncate not implemented yet
-//         ESP_LOGD(TAG, "Expanding log file to %d bytes", MAX_LOGS*sizeof(Log_Entry));
-//         Log_Entry entry = {0};
-//         for(int i = 0; i < MAX_LOGS; i++)
-//         {
-//             fwrite(&entry, sizeof(Log_Entry), 1, log);
-//         }
-//         ESP_LOGD(TAG, "Log file %ld bytes large", ftell(log));
-//         fclose(log);
+esp_err_t create_log_file()
+{
+    ESP_LOGI(TAG, "Creating log file");
+    FILE* log = fopen("/spiffs/log", "w");
+    if (log)
+    {
+        // ftruncate not implemented yet
+        ESP_LOGD(TAG, "Expanding log file to %d bytes", MAX_LOGS*sizeof(Log_Entry));
+        Log_Entry entry = {0};
+        for(int i = 0; i < MAX_LOGS; i++)
+        {
+            fwrite(&entry, sizeof(Log_Entry), 1, log);
+        }
+        ESP_LOGD(TAG, "Log file %ld bytes large", ftell(log));
+        fclose(log);
 
-//         uint16_t size = MAX_LOGS; 
-//         bool full = false;
+        // uint16_t size = MAX_LOGS; 
+        // bool full = false;
 
-//         nvs_set("log_head", (void*)&size, sizeof(size));
-//         nvs_set("full_flag", (void*)&full, sizeof(full));
-//         return ESP_OK;
-//     }
-//     else
-//     {
-//         return LOG_ERR_LOG_UNAVAILABLE;
-//     }
-// }
+        // nvs_set("log_head", (void*)&size, sizeof(size));
+        // nvs_set("full_flag", (void*)&full, sizeof(full));
+        return ESP_OK;
+    }
+    else
+    {
+        return LOG_ERR_LOG_UNAVAILABLE;
+    }
+}
 
 esp_err_t initialize_logging()
 {

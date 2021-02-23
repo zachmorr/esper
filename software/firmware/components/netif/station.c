@@ -1,4 +1,5 @@
 #include "station.h"
+#include "error.h"
 #include "flash.h"
 #include "gpio.h"
 #include <string.h>
@@ -136,11 +137,6 @@ static esp_err_t init_ethernet()
     if( err != ESP_OK )
         return ESP_FAIL;
 
-    uint8_t mac_addr[6] = {0};
-    esp_eth_ioctl(eth_handle, ETH_CMD_G_MAC_ADDR, mac_addr);
-    ESP_LOGI(TAG, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
-    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-
     return ESP_OK;
 }
 
@@ -160,15 +156,16 @@ static esp_err_t init_wifi()
     if( err != ESP_OK )
         return ESP_FAIL;
 
-    uint8_t mac_addr[6];
-    esp_wifi_get_mac(ESP_IF_WIFI_STA, mac_addr);
-    ESP_LOGI(TAG, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
-    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-
-    wifi_config_t wifi_config;
+    wifi_config_t wifi_config = {0};
+#if CONFIG_PROVISION_DISABLE
+    strcpy((char*)wifi_config.sta.ssid, CONFIG_SSID);
+    strcpy((char*)wifi_config.sta.password, CONFIG_PASSWORD);
+#elif
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
-    ESP_LOGI(TAG, "SSID: %s", wifi_config.ap.ssid);
-    ESP_LOGI(TAG, "PASS: %s", wifi_config.ap.password);
+#endif
+
+    ESP_LOGI(TAG, "SSID - %s", wifi_config.sta.ssid);
+    ESP_LOGI(TAG, "PASS - %s", wifi_config.sta.password);
 
     err = esp_wifi_set_mode(WIFI_MODE_STA);
     err |= esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config);
@@ -178,22 +175,26 @@ static esp_err_t init_wifi()
     return ESP_OK;
 }
 
-esp_err_t set_network_info(){
+esp_err_t set_static_ip(){
     // Give interfaces static IPs
     esp_netif_dhcpc_stop(eth_netif);
     esp_netif_dhcpc_stop(wifi_netif);
 
     esp_netif_ip_info_t ip_info;
-    char ip[IP4ADDR_STRLEN_MAX+1] = {0};
+    if( get_network_info(&ip_info) != ESP_OK ){
+        return ESP_FAIL;
+    }
+        
+    // char ip[IP4ADDR_STRLEN_MAX+1] = {0};
 
-    nvs_get("nm", (void*)ip, IP4ADDR_STRLEN_MAX);
-    inet_pton(AF_INET, ip, &ip_info.netmask);
+    // nvs_get("nm", (void*)ip, IP4ADDR_STRLEN_MAX);
+    // inet_pton(AF_INET, ip, &ip_info.netmask);
 
-    nvs_get("gw", (void*)ip, IP4ADDR_STRLEN_MAX);
-    inet_pton(AF_INET, ip, &ip_info.gw);
+    // nvs_get("gw", (void*)ip, IP4ADDR_STRLEN_MAX);
+    // inet_pton(AF_INET, ip, &ip_info.gw);
 
-    nvs_get("ip", (void*)ip, IP4ADDR_STRLEN_MAX);
-    inet_pton(AF_INET, ip, &ip_info.ip);
+    // nvs_get("ip", (void*)ip, IP4ADDR_STRLEN_MAX);
+    // inet_pton(AF_INET, ip, &ip_info.ip);
 
     esp_netif_set_ip_info(eth_netif, &ip_info);
     esp_netif_set_ip_info(wifi_netif, &ip_info);
@@ -210,6 +211,7 @@ esp_err_t set_network_info(){
     if( err != ESP_OK )
         return ESP_FAIL;
 
+    ESP_LOGI(TAG, "Set static ip");
     return ESP_OK;
 }
 
@@ -228,8 +230,8 @@ esp_err_t wifi_init_sta()
     
     netif_event_group = xEventGroupCreate();
     err = init_ethernet();
-    err |= init_wifi();
-    err |= set_network_info();
+    // err |= init_wifi();
+    ERROR_CHECK(set_static_ip());
     err |= esp_eth_start(eth_handle);
     //err |= esp_wifi_start();
     if( err != ESP_OK )

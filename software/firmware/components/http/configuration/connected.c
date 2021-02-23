@@ -6,6 +6,8 @@
 #include <esp_http_server.h>
 #include "cJSON.h"
 #include "freertos/timers.h"
+#include "esp_netif.h"
+#include "lwip/inet.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
@@ -22,10 +24,13 @@ static esp_err_t connection_json_get_handler(httpd_req_t *req)
     
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
-    cJSON_AddStringToObject(connection, "ssid", (char*)wifi_config.ap.ssid);
+    cJSON_AddStringToObject(connection, "ssid", (char*)wifi_config.sta.ssid);
 
-    char ip[16];
-    nvs_get("ip", (void*)ip, 16);
+    // char ip[16];
+    // nvs_get("ip", (void*)ip, 16);
+    esp_netif_ip_info_t info;
+    get_network_info(&info);
+    char* ip = inet_ntoa(info.ip);
     cJSON_AddStringToObject(connection, "ip", ip);
 
     httpd_resp_sendstr(req, cJSON_Print(connection));
@@ -57,11 +62,11 @@ static esp_err_t finish_setup_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Finishing setup");
 
-    if (store_default_lists() != ESP_OK)
-    {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to create blacklist file");
-        return ESP_OK;
-    }
+    // if (store_default_lists() != ESP_OK)
+    // {
+    //     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to create blacklist file");
+    //     return ESP_OK;
+    // }
 
     // if (create_log_file() != ESP_OK)
     // {

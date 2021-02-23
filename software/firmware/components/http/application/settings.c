@@ -6,6 +6,7 @@
 #include "url.h"
 #include "cJSON.h"
 #include "esp_ota_ops.h"
+#include "esp_netif.h"
 
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
@@ -42,8 +43,10 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     bool blocking = blocking_on();
     cJSON_AddBoolToObject(json, "blocking", blocking);
 
-    char ip[IP4ADDR_STRLEN_MAX];
-    nvs_get("ip", (void*)ip, 0);
+    esp_netif_ip_info_t info;
+    get_network_info(&info);
+    char* ip = inet_ntoa(info.ip);
+    // nvs_get("ip", (void*)ip, 0);
     cJSON_AddStringToObject(json, "ip", ip);
 
     char url[MAX_URL_LENGTH];
@@ -105,7 +108,11 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "IP: %s", ip->valuestring);
-    nvs_set("ip", (void*)ip->valuestring, strlen(ip->valuestring)+1);
+    esp_netif_ip_info_t info;
+    get_network_info(&info);
+    inet_aton(ip->valuestring, &(info.ip));
+    set_network_info(info);
+    // nvs_set("ip", (void*)ip->valuestring, strlen(ip->valuestring)+1);
 
     // Get url
     cJSON* url = cJSON_GetObjectItem(json, "url");
@@ -144,7 +151,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     nvs_set("update_url", (void*)updatesrv->valuestring, strlen(updatesrv->valuestring)+1);
 
     // Reload things that rely on one of the settings
-    set_network_info();
+    set_static_ip();
     set_device_url();
     initialize_upstream_socket();
     check_for_update();

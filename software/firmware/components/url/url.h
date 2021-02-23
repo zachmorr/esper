@@ -24,7 +24,7 @@ void return_blacklist();
 esp_err_t add_to_blacklist(URL url);
 esp_err_t remove_from_blacklist(URL url);
 
-// esp_err_t store_default_lists();
+esp_err_t store_default_blacklists();
 esp_err_t initialize_blocklists();
 
 bool valid_url(URL url);

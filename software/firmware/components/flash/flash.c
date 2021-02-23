@@ -1,14 +1,16 @@
 #include "flash.h"
-// #include "dns.h"
-// #include "url.h"
-
+#include "error.h"
+#include "url.h"
+#include "logging.h"
 #include "esp_system.h"
 #include "string.h"
 #include "nvs_flash.h"
 #include "esp_spiffs.h"
-// #include "esp_http_server.h"
+#include "esp_netif.h"
+#include "lwip/inet.h"
+#include "esp_wifi.h"
 
-#define LOG_LOCAL_LEVEL ESP_LOG_WARN
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
 static const char *TAG = "FLASH";
 
@@ -51,57 +53,63 @@ esp_err_t nvs_get(char* key, void* value, size_t length)
     return ret;
 }
 
-esp_err_t store_default_blacklists()
+esp_err_t reset_device()
 {
-    ESP_LOGI(TAG, "Saving Blacklist");
-    FILE* b = fopen("/spiffs/blacklist", "w");
-    if(b == NULL)
-    {
-        ESP_LOGE(TAG, "Error opening blacklist file");
+    ESP_LOGI(TAG, "Reseting Device");
+    
+    // uint8_t conf_status = 0;
+    // esp_err_t err = nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
+    return nvs_set_u8(nvs, "configured", (uint8_t)false);
+}
+
+esp_err_t check_configuration_status(bool* configured)
+{
+    return nvs_get_u8(nvs, "configured", (uint8_t*)configured);
+}
+
+esp_err_t get_network_info(esp_netif_ip_info_t* info)
+{
+    size_t length = sizeof(*info);
+    esp_err_t err = nvs_get_blob(nvs, "network_info", (void*)info, &length);
+    if( err != ESP_OK ){
+        ESP_LOGE(TAG, "Error getting network info (%s)", esp_err_to_name(err));
+    }
+    return err;
+}
+
+esp_err_t set_network_info(esp_netif_ip_info_t info)
+{
+    esp_err_t err = nvs_set_blob(nvs, "network_info", (void*)&info, sizeof(info));
+    if( err != ESP_OK ){
+        ESP_LOGE(TAG, "Error setting network info (%s)", esp_err_to_name(err));
+    }
+    return err;
+}
+
+esp_err_t get_log_data(uint16_t* head, bool* full){
+    esp_err_t err = nvs_get_u16(nvs, "log_head", head);
+    err |= nvs_get_u8(nvs, "full_flag", (uint8_t*)full);
+
+    if( err != ESP_OK ){
         return ESP_FAIL;
     }
-
-    extern const unsigned char blacklist_txt_start[] asm("_binary_default_blacklist_txt_start");
-    extern const unsigned char blacklist_txt_end[]   asm("_binary_default_blacklist_txt_end");
-    const size_t blacklist_txt_size = (blacklist_txt_end - blacklist_txt_start);
-
-    fwrite(blacklist_txt_start, blacklist_txt_size, 1, b);
-    fclose(b);
-
     return ESP_OK;
 }
 
-static esp_err_t create_log_file()
+esp_err_t update_log_data(uint16_t head, bool full)
 {
-    ESP_LOGI(TAG, "Creating log file");
-    FILE* log = fopen("/spiffs/log", "w");
-    if (log)
-    {
-        // ftruncate not implemented yet
-        ESP_LOGD(TAG, "Expanding log file to %d bytes", MAX_LOGS*sizeof(Log_Entry));
-        Log_Entry entry = {0};
-        for(int i = 0; i < MAX_LOGS; i++)
-        {
-            fwrite(&entry, sizeof(Log_Entry), 1, log);
-        }
-        ESP_LOGD(TAG, "Log file %ld bytes large", ftell(log));
-        fclose(log);
+    esp_err_t err = nvs_set_u16(nvs, "log_head", head);
+    err |= nvs_set_u8(nvs, "full_flag", (uint8_t)full);
 
-        uint16_t size = MAX_LOGS; 
-        bool full = false;
-
-        nvs_set("log_head", (void*)&size, sizeof(size));
-        nvs_set("full_flag", (void*)&full, sizeof(full));
-        return ESP_OK;
-    }
-    else
-    {
+    if( err != ESP_OK ){
         return ESP_FAIL;
     }
+    return ESP_OK;
 }
 
-static init_settings()
+static esp_err_t init_data()
 {
+    // Initialize settings
     esp_err_t err = nvs_set_u8(nvs, "initialized", (uint8_t)true);
 #if CONFIG_UPSTREAM_DNS_GOOGLE
     err = nvs_set_blob(nvs, "upstream_server", GOOGLE_IP, IP4_STRLEN_MAX);
@@ -116,6 +124,20 @@ static init_settings()
     err |= nvs_set_blob(nvs, "update_url", CONFIG_DEFAULT_UPDATE_URI, HOSTNAME_STRLEN_MAX + CONFIG_HTTPD_MAX_URI_LEN);
     err |= nvs_set_u8(nvs, "configured", (uint8_t)false);
 
+    // initialize variables that will be used for circular buffer of logs
+    err |= update_log_data(MAX_LOGS, false);
+
+    // initialize network info
+    esp_netif_ip_info_t info = {0};
+#if CONFIG_PROVISION_DISABLE
+    inet_aton(CONFIG_IP, &(info.ip));
+    inet_aton(CONFIG_GW, &(info.gw));
+    inet_aton(CONFIG_NM, &(info.netmask));
+
+    err |= nvs_set_u8(nvs, "configured", (uint8_t)true);
+#endif
+    err |= set_network_info(info);
+
     if( err != ESP_OK ){
         return ESP_FAIL;
     }
@@ -127,7 +149,7 @@ static bool first_power_on()
     bool initialized;
     esp_err_t err = nvs_get_u8(nvs, "initialized", (uint8_t*)&initialized);
     if( err ==  ESP_ERR_NVS_NOT_FOUND ){
-        ESP_LOGE(TAG, "Flash has not been initialized");
+        ESP_LOGW(TAG, "Flash has not been initialized");
         return true;
     }
     return false;
@@ -192,37 +214,21 @@ esp_err_t initialize_flash()
 {    
     esp_err_t err = init_nvs();
     err |= init_spiffs();
-
     if( err != ESP_OK ){
         return ESP_FAIL;
     }
     
     if( first_power_on() )
     {
-        ESP_LOGI(TAG, "Initializing required data...");
-        err = init_settings();
+        ESP_LOGI(TAG, "First power up, initializing required data...");
+        err = init_data();
         err |= create_log_file();
         err |= store_default_blacklists();
-    }
-
-    if( err != ESP_OK ){
-        return ESP_FAIL;
+        if( err != ESP_OK ){
+            return ESP_FAIL;
+        }
     }
 
     ESP_LOGI(TAG, "Flash Initialized");
     return ESP_OK;
-}
-
-esp_err_t reset_device()
-{
-    ESP_LOGI(TAG, "Reseting Device");
-    uint8_t conf_status = 0;
-    esp_err_t err = nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
-    return err;
-}
-
-esp_err_t check_configuration_status(bool* configured)
-{
-    ESP_LOGD(TAG, "Reading config_status");
-    return err |= nvs_get_u8(nvs, "configured", (uint8_t*)configured);;
 }
