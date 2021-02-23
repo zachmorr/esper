@@ -1,4 +1,5 @@
 #include "error.h"
+#include "wifi.h"
 #include "flash.h"
 #include "logging.h"
 #include "datetime.h"
@@ -11,7 +12,7 @@
 #include "application.h"
 #include "url.h"
 #include "ota.h"
-
+#include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -24,31 +25,32 @@ static esp_err_t init_app()
     ERROR_CHECK(initialize_gpio())
     ERROR_CHECK(set_led_state(STARTUP, SET))
     ERROR_CHECK(initialize_flash())
+    ERROR_CHECK(init_wifi_netif(WIFI_MODE_STA))
 
-    bool configured = false;
-    check_configuration_status(&configured);
-    if(configured)
-    {
-        ESP_LOGI(TAG, "Already configured, starting application...");
-        ERROR_CHECK(initialize_blocklists())
-        ERROR_CHECK(initialize_logging())
-        ERROR_CHECK(wifi_init_sta())
-        ERROR_CHECK(start_application_webserver())
-        ERROR_CHECK(initialize_sntp())
-        ERROR_CHECK(start_dns())
-        start_update_checking_task();
-        set_led_state(STARTUP, CLEAR);
-        set_led_state(BLOCKING, SET);
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Not configured, starting wifi provisioning...");
-        ERROR_CHECK(wifi_init_apsta())
-        ERROR_CHECK(start_captive_dns())
-        ERROR_CHECK(start_configuration_webserver())
-        set_led_state(STARTUP, CLEAR);
-        set_led_state(CONFIGURING, SET);
-    }
+    // bool configured = false;
+    // check_configuration_status(&configured);
+    // if(configured)
+    // {
+    //     ESP_LOGI(TAG, "Already configured, starting application...");
+    //     ERROR_CHECK(initialize_blocklists())
+    //     ERROR_CHECK(initialize_logging())
+    //     ERROR_CHECK(wifi_init_sta())
+    //     ERROR_CHECK(start_application_webserver())
+    //     ERROR_CHECK(initialize_sntp())
+    //     ERROR_CHECK(start_dns())
+    //     start_update_checking_task();
+    //     set_led_state(STARTUP, CLEAR);
+    //     set_led_state(BLOCKING, SET);
+    // }
+    // else
+    // {
+    //     ESP_LOGI(TAG, "Not configured, starting wifi provisioning...");
+    //     ERROR_CHECK(wifi_init_apsta())
+    //     ERROR_CHECK(start_captive_dns())
+    //     ERROR_CHECK(start_configuration_webserver())
+    //     set_led_state(STARTUP, CLEAR);
+    //     set_led_state(CONFIGURING, SET);
+    // }
 
     return ESP_OK;
 }

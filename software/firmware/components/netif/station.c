@@ -60,7 +60,6 @@ static void sta_wifi_event_handler(void* arg, esp_event_base_t event_base,
 static void sta_eth_event_handler(void *arg, esp_event_base_t event_base,
                               int32_t event_id, void *event_data)
 {
-
     switch (event_id) {
         case ETHERNET_EVENT_CONNECTED:
             ESP_LOGI(TAG, "ETHERNET_EVENT_CONNECTED");
@@ -160,7 +159,7 @@ static esp_err_t init_wifi()
 #if CONFIG_PROVISION_DISABLE
     strcpy((char*)wifi_config.sta.ssid, CONFIG_SSID);
     strcpy((char*)wifi_config.sta.password, CONFIG_PASSWORD);
-#elif
+#else
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
 #endif
 
@@ -211,7 +210,6 @@ esp_err_t set_static_ip(){
     if( err != ESP_OK )
         return ESP_FAIL;
 
-    ESP_LOGI(TAG, "Set static ip");
     return ESP_OK;
 }
 
@@ -230,7 +228,7 @@ esp_err_t wifi_init_sta()
     
     netif_event_group = xEventGroupCreate();
     err = init_ethernet();
-    // err |= init_wifi();
+    err |= init_wifi();
     ERROR_CHECK(set_static_ip());
     err |= esp_eth_start(eth_handle);
     //err |= esp_wifi_start();
