@@ -10,7 +10,7 @@ idf_component_register( SRCS            "application/application.c"
                                         "configuration/include/"
                                         "."
 
-                        PRIV_REQUIRES   netif dns flash logging datetime url spiffs esp_http_server ota json app_update
+                        PRIV_REQUIRES   netif dns flash logging datetime url spiffs esp_http_server ota json app_update error
 
                         EMBED_FILES     "configuration/html/wifi_select.html"
                                         "configuration/html/connected.html"

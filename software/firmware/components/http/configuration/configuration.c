@@ -12,8 +12,6 @@ static const char *windows10_hotspot_detect = "/connecttest.txt";
 static const char *windows10_hotspot_detect_response = "Microsoft Connect Test";
 
 static httpd_handle_t server;
-static bool connected = false;
-
 
 static esp_err_t apple_captive_portal_handler(httpd_req_t *req)
 {

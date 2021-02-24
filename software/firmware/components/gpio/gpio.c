@@ -1,7 +1,7 @@
 #include "gpio.h"
 #include "flash.h"
 #include "dns.h"
-
+#include "error.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"

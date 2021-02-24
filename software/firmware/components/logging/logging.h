@@ -6,7 +6,7 @@
 
 #define MAX_LOGS 100
 
-#define LOG_ERR_LOG_UNAVAILABLE 0X300
+// #define LOG_ERR_LOG_UNAVAILABLE 0X300
 
 typedef struct {
     time_t time;

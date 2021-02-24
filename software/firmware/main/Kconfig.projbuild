@@ -101,18 +101,23 @@ menu "Application Configuration"
         if PROVISION_DISABLE
             config SSID
                 string "SSID"
+                default "WIFI"
 
             config PASSWORD
                 string "Password"
+                default "Password"
 
             config IP
                 string "IP Address"
+                default "192.168.1.2"
 
             config GW
                 string "Gateway"
+                default "192.168.1.1"
 
             config NM
                 string "Netmask"
+                default "255.255.255.0"
 
         endif # PROVISION_DISABLE
     endif # WIFI_ENABLE

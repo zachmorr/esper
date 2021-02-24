@@ -1,5 +1,6 @@
 #include "blacklist.h"
 #include "flash.h"
+#include "error.h"
 #include "url.h"
 #include "cJSON.h"
 

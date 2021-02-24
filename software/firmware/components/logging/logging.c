@@ -1,6 +1,6 @@
 #include "logging.h"
 #include "flash.h"
-
+#include "error.h"
 #include "sys/unistd.h"
 #include "unistd.h"
 #include "sys/stat.h"

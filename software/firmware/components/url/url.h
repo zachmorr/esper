@@ -7,12 +7,13 @@
 #define MAX_WHITELIST_SIZE 20000
 #define MAX_URL_LENGTH 255
 
-#define URL_ERR_TOO_LONG 0x200
-#define URL_ERR_LIST_UNAVAILBLE 0x201
-#define URL_ERR_LIST_FUll 0x202
-#define URL_ERR_NOT_FOUND 0x203
-#define URL_ERR_ALREADY_EXISTS 0x204
-#define URL_ERR_INVALID_URL 0x205
+// #define URL_ERR_BASE
+// #define URL_ERR_TOO_LONG 0x200
+// #define URL_ERR_LIST_UNAVAILBLE 0x201
+// #define URL_ERR_LIST_FUll 0x202
+// #define URL_ERR_NOT_FOUND 0x203
+// #define URL_ERR_ALREADY_EXISTS 0x204
+// #define URL_ERR_INVALID_URL 0x205
 
 typedef struct {
     uint8_t length;
