@@ -2,7 +2,7 @@ menu "Application Configuration"
 
     menuconfig ETHERNET_ENABLE
         bool "Enable Ethernet"
-        default "y"
+        default y
         help
             Turn ethernet on
 
@@ -73,32 +73,36 @@ menu "Application Configuration"
 
     menuconfig WIFI_ENABLE
         bool "Enable Wifi"
-        default "y"
+        default y
         help
             Turn wifi on
 
     if WIFI_ENABLE
-        config PROVISION_DISABLE
-            bool "Disable Provisioning"
-            default n
+        config AP_SSID
+            string "Access Point SSID"
+            default "Esper"
             help
-                Turn wifi on
+                SSID of esper while in provisioning mode
 
-        if !PROVISION_DISABLE
-            config AP_SSID
-                string "Access Point SSID"
-                default "Esper"
+        config AP_PASSWORD
+            string "Access Point Password"
+            default ""
+            help
+                Password of esper while in provisioning mode, empty password is valid
 
-            config AP_PASSWORD
-                string "Access Point Password"
-                default ""
+        config AP_CONNECTIONS
+            int "Max Access Point Connections"
+            default 1
+            help
+                Max number of devices that may be connected to Esper while provisioning
 
-            config AP_CONNECTIONS
-                int "Max Access Point Connections"
-                default 1
-        endif # !PROVISION_DISABLE
+        config PROVISION_ENABLE
+            bool "Enable Provisioning"
+            default y
+            help
+                Turn provisioning on
 
-        if PROVISION_DISABLE
+        if !PROVISION_ENABLE
             config SSID
                 string "SSID"
                 default "WIFI"
@@ -119,7 +123,7 @@ menu "Application Configuration"
                 string "Netmask"
                 default "255.255.255.0"
 
-        endif # PROVISION_DISABLE
+        endif # PROVISION_ENABLE
     endif # WIFI_ENABLE
  
     menuconfig GPIO_ENABLE

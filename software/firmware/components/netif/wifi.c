@@ -10,11 +10,12 @@ static const char *TAG = "WIFI";
 
 static wifi_mode_t wifi_mode = WIFI_MODE_NULL;
 
-static esp_netif_t *wifi_sta_netif = NULL;
-static esp_netif_t *wifi_ap_netif = NULL;
+static esp_netif_t* wifi_sta_netif = NULL;
+static esp_netif_t* wifi_ap_netif = NULL;
 
-static wifi_config_t sta_config = {0};
-static wifi_config_t ap_config = {0};
+static wifi_config_t* sta_config = NULL;
+static wifi_config_t* ap_config = NULL;
+
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
@@ -92,8 +93,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
 }
 
-static void ip_event_handler(void* arg, esp_event_base_t event_base,
-                                    int32_t event_id, void* event_data)
+static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     switch (event_id) {
         case IP_EVENT_ETH_GOT_IP:
@@ -111,6 +111,67 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
         default:
             break;
     }
+}
+
+esp_err_t set_sta_config(char* ssid, char* pass)
+{
+    if( !sta_config ){
+        sta_config = malloc(sizeof(*sta_config));
+        if (!sta_config) { return ESP_FAIL; }
+    }
+
+    if( ssid == NULL || pass == NULL)
+        return ESP_FAIL;
+
+    strcpy((char*)sta_config->sta.ssid, ssid);
+    strcpy((char*)sta_config->sta.password, pass);
+
+    return ESP_OK;
+}
+
+esp_err_t update_sta_config()
+{
+    if( !wifi_sta_netif )
+        return WIFI_ERR_NULL_NETIF;
+
+    if( !sta_config )
+        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, sta_config))
+    ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, sta_config))
+
+    return ESP_OK;
+}
+
+esp_err_t set_ap_config(char* ssid, char* pass, int connections)
+{
+    if( !ap_config ){
+        ap_config = malloc(sizeof(*ap_config));
+        if (!ap_config) { return ESP_FAIL; }
+    }
+
+    ap_config->ap.ssid_len = strlen(ssid);
+    memcpy(ap_config->ap.ssid, ssid, ap_config->ap.ssid_len);
+    strcpy((char*)ap_config->ap.password, pass);
+    ap_config->ap.max_connection = connections;
+
+    ap_config->ap.channel = 1;
+    ap_config->ap.authmode =  WIFI_AUTH_WPA_WPA2_PSK;
+    if (strlen(pass) < 1) {
+        ap_config->ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t update_ap_config()
+{
+    if( !wifi_ap_netif )
+        return WIFI_ERR_NULL_NETIF;
+
+    if( !ap_config )
+        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_AP, ap_config))
+    ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, ap_config))
+
+    return ESP_OK;
 }
 
 static esp_err_t init_wifi_sta_netif()
@@ -145,75 +206,50 @@ static esp_err_t init_wifi_ap_netif()
     ERROR_CHECK(esp_netif_attach_wifi_ap(wifi_ap_netif))
     ERROR_CHECK(esp_wifi_set_default_wifi_ap_handlers())
 
-    wifi_config_t config = {
-        .ap = {
-            .ssid = CONFIG_AP_SSID,
-            .ssid_len = strlen(CONFIG_AP_SSID),
-            .channel = 1,
-            .password = CONFIG_AP_PASSWORD,
-            .max_connection = CONFIG_AP_CONNECTIONS,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK
-        },
-    };
-    if (strlen(CONFIG_AP_PASSWORD) == 0) {
-        config.ap.authmode = WIFI_AUTH_OPEN;
-    }
-    ap_config = config;
-
     return ESP_OK;
 }
 
 esp_err_t init_wifi_netif()
 {
-    ESP_LOGI(TAG, "Initializing wifi...");
+    ESP_LOGI(TAG, "Initializing Wifi Interfaces...");
 
-    if( wifi_mode == WIFI_MODE_NULL )
+    if( wifi_mode != WIFI_MODE_STA && wifi_mode != WIFI_MODE_APSTA )
         return WIFI_ERR_MODE_NULL;
     
     ERROR_CHECK(esp_netif_init())
     ERROR_CHECK(esp_event_loop_create_default())
 
-    if( wifi_mode == WIFI_MODE_STA || wifi_mode == WIFI_MODE_APSTA ){
-        ERROR_CHECK(init_wifi_sta_netif())
-        ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config))
-    }
+    ERROR_CHECK(init_wifi_sta_netif())
 
-    if( wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA ){
+    if(wifi_mode == WIFI_MODE_APSTA ){
         ERROR_CHECK(init_wifi_ap_netif())
-        ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &ap_config))
     }
  
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&init_cfg);
+
+    ERROR_CHECK(update_sta_config())
+    ERROR_CHECK(update_ap_config())
 
     return ESP_OK;
 }
 
 esp_err_t wifi_start()
 {
-    ESP_LOGI(TAG, "Initializing Wifi");
+    ESP_LOGI(TAG, "Starting Wifi");
 
-    ERROR_CHECK(init_wifi_netif())
+    if( !wifi_sta_netif )
+        return WIFI_ERR_NULL_NETIF;
+
+    if(wifi_mode == WIFI_MODE_APSTA ){
+        if( !wifi_ap_netif )
+            return WIFI_ERR_NULL_NETIF;
+    }
+
     ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL))
     ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
     ERROR_CHECK(esp_wifi_set_mode(wifi_mode))
     ERROR_CHECK(esp_wifi_start())
-
-    return ESP_OK;
-}
-
-esp_err_t set_sta_config(char* ssid, char* pass)
-{
-    if( ssid == NULL || pass == NULL)
-    {
-        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &sta_config))
-    }
-    else
-    {
-        strcpy((char*)sta_config.sta.ssid, ssid);
-        strcpy((char*)sta_config.sta.password, pass);
-    }
-
     return ESP_OK;
 }
 

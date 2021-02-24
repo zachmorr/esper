@@ -1,6 +1,7 @@
 #include "flash.h"
 #include "error.h"
 #include "url.h"
+#include "wifi.h"
 #include "logging.h"
 #include "esp_system.h"
 #include "string.h"
@@ -127,16 +128,17 @@ static esp_err_t init_data()
     // initialize variables that will be used for circular buffer of logs
     err |= update_log_data(MAX_LOGS, false);
 
-    // initialize network info
+    // initialize network info, it will be empty if provisioning is enabled
     esp_netif_ip_info_t info = {0};
-#if CONFIG_PROVISION_DISABLE
+#ifndef CONFIG_PROVISION_ENABLE
+    ERROR_CHECK(set_sta_config(CONFIG_SSID, CONFIG_PASSWORD))
     inet_aton(CONFIG_IP, &(info.ip));
     inet_aton(CONFIG_GW, &(info.gw));
     inet_aton(CONFIG_NM, &(info.netmask));
-
     err |= nvs_set_u8(nvs, "configured", (uint8_t)true);
 #endif
     err |= set_network_info(info);
+    ERROR_CHECK(set_ap_config(CONFIG_AP_SSID, CONFIG_AP_PASSWORD, CONFIG_AP_CONNECTIONS))
 
     if( err != ESP_OK ){
         return ESP_FAIL;

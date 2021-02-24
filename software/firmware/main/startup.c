@@ -25,7 +25,11 @@ static esp_err_t init_app()
     ERROR_CHECK(initialize_gpio())
     ERROR_CHECK(set_led_state(STARTUP, SET))
     ERROR_CHECK(initialize_flash())
-    ERROR_CHECK(init_wifi_netif(WIFI_MODE_STA))
+
+    ERROR_CHECK(set_wifi_mode(WIFI_MODE_STA))
+    ERROR_CHECK(init_wifi_netif())
+    ERROR_CHECK(update_sta_config())
+    ERROR_CHECK(wifi_start())
 
     // bool configured = false;
     // check_configuration_status(&configured);
