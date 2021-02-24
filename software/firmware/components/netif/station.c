@@ -156,12 +156,7 @@ static esp_err_t init_wifi()
         return ESP_FAIL;
 
     wifi_config_t wifi_config = {0};
-#if CONFIG_PROVISION_DISABLE
-    strcpy((char*)wifi_config.sta.ssid, CONFIG_SSID);
-    strcpy((char*)wifi_config.sta.password, CONFIG_PASSWORD);
-#else
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
-#endif
 
     ESP_LOGI(TAG, "SSID - %s", wifi_config.sta.ssid);
     ESP_LOGI(TAG, "PASS - %s", wifi_config.sta.password);

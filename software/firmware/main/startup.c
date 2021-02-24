@@ -4,8 +4,8 @@
 #include "logging.h"
 #include "datetime.h"
 #include "gpio.h"
-#include "station.h"
-#include "accesspoint.h"
+// #include "station.h"
+// #include "accesspoint.h"
 #include "dns.h"
 #include "captive_dns.h"
 #include "configuration.h"
@@ -26,10 +26,12 @@ static esp_err_t init_app()
     ERROR_CHECK(set_led_state(STARTUP, SET))
     ERROR_CHECK(initialize_flash())
 
-    ERROR_CHECK(set_wifi_mode(WIFI_MODE_STA))
-    ERROR_CHECK(init_wifi_netif())
-    ERROR_CHECK(update_sta_config())
-    ERROR_CHECK(wifi_start())
+    // ERROR_CHECK(set_sta_config(CONFIG_SSID, CONFIG_PASSWORD))
+    ERROR_CHECK(init_wifi())
+    ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
+    ERROR_CHECK(init_wifi_sta_netif())
+    ERROR_CHECK(esp_wifi_start())
+    ERROR_CHECK(esp_wifi_connect())
 
     // bool configured = false;
     // check_configuration_status(&configured);
