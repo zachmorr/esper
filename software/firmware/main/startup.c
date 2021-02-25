@@ -27,11 +27,29 @@ static esp_err_t init_app()
     ERROR_CHECK(initialize_flash())
 
     // ERROR_CHECK(set_sta_config(CONFIG_SSID, CONFIG_PASSWORD))
+    // ERROR_CHECK(init_wifi())
+    // ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
+    // ERROR_CHECK(init_wifi_sta_netif())
+    // ERROR_CHECK(esp_wifi_start())
+    // ERROR_CHECK(esp_wifi_connect())
+
+    // ERROR_CHECK(set_sta_config(CONFIG_SSID, CONFIG_PASSWORD))
+    // ERROR_CHECK(set_ap_config(CONFIG_AP_SSID, CONFIG_AP_PASSWORD, CONFIG_AP_CONNECTIONS))
     ERROR_CHECK(init_wifi())
-    ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
+    ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA))
     ERROR_CHECK(init_wifi_sta_netif())
+    ERROR_CHECK(init_wifi_ap_netif())
     ERROR_CHECK(esp_wifi_start())
-    ERROR_CHECK(esp_wifi_connect())
+    ERROR_CHECK(wifi_scan())
+
+    wifi_ap_record_t ap_list[MAX_SCAN_RECORDS] = get_scan_results();
+    for( int i = 0; i < MAX_SCAN_RECORDS; i++ ){
+        ESP_LOGI(TAG, "%s", ap_list[i].ssid);
+    }
+    // ERROR_CHECK(print_scan_results())
+    // ERROR_CHECK(esp_wifi_connect())
+
+
 
     // bool configured = false;
     // check_configuration_status(&configured);

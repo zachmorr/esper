@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "error.h": "c",
-        "esp_wifi.h": "c"
+        "esp_wifi.h": "c",
+        "chrono": "c",
+        "algorithm": "c",
+        "esp_log.h": "c"
     }
 }

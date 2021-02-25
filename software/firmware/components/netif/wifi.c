@@ -3,12 +3,16 @@
 #include "string.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
+#include "freertos/event_groups.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
 static const char *TAG = "WIFI";
 
-// static wifi_mode_t wifi_mode = WIFI_MODE_NULL;
+static EventGroupHandle_t s_wifi_event_group;
+const int SCAN_FINISHED_BIT = BIT0;
+const int DISCONNECTED_BIT = BIT1;
+const int CONNECTED_BIT = BIT2;
 
 static esp_netif_t* wifi_sta_netif = NULL;
 static esp_netif_t* wifi_ap_netif = NULL;
@@ -16,6 +20,8 @@ static esp_netif_t* wifi_ap_netif = NULL;
 static wifi_config_t sta_config = {0};
 static wifi_config_t ap_config = {0};
 
+static bool scan_finished = false;
+static wifi_ap_record_t ap_list[MAX_SCAN_RECORDS];
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
@@ -27,7 +33,10 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         }
         case WIFI_EVENT_SCAN_DONE:{
             ESP_LOGI(TAG, "WIFI_EVENT_SCAN_DONE");
-            // (wifi_event_sta_scan_done_t*)event_data;
+            // wifi_event_sta_scan_done_t* event = (wifi_event_sta_scan_done_t*)event_data;
+            uint16_t ap_count = MAX_SCAN_RECORDS;
+            esp_wifi_scan_get_ap_records(&ap_count, ap_list);
+            xEventGroupSetBits(s_wifi_event_group, SCAN_FINISHED_BIT);
             break;
         }
         case WIFI_EVENT_STA_START:
@@ -44,13 +53,15 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         {
             ESP_LOGI(TAG, "WIFI_EVENT_STA_CONNECTED");
             // (wifi_event_sta_connected_t*)event_data;
+            xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
             break;
         }
         case WIFI_EVENT_STA_DISCONNECTED:
         {
             wifi_event_sta_disconnected_t* event = (wifi_event_sta_disconnected_t*) event_data;
             ESP_LOGW(TAG, "WIFI_EVENT_STA_DISCONNECTED %d", event->reason);
-            wifi_err_reason_t err;
+            xEventGroupSetBits(s_wifi_event_group, DISCONNECTED_BIT);
+            // wifi_err_reason_t err;
             break;
         }
         case WIFI_EVENT_STA_AUTHMODE_CHANGE:
@@ -134,11 +145,11 @@ esp_err_t update_sta_config()
 
     if( strlen((const char*)sta_config.sta.ssid) == 0 )
     {
-        ESP_LOGI(TAG, "Loading sta config from memory");
+        ESP_LOGD(TAG, "Loading STA config from memory");
         ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &sta_config))
     }
 
-    ESP_LOGI(TAG, "SSID (%s) PASS (%s)", sta_config.sta.ssid, sta_config.sta.password);
+    ESP_LOGI(TAG, "STA SSID (%s) PASS (%s)", sta_config.sta.ssid, sta_config.sta.password);
     ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config))
 
     return ESP_OK;
@@ -170,10 +181,11 @@ esp_err_t update_ap_config()
 
     if( strlen((const char*)ap_config.ap.ssid) == 0 )
     {
+        ESP_LOGD(TAG, "Loading AP config from memory");
         ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_AP, &ap_config))
     }
 
-    ESP_LOGI(TAG, "SSID (%s) PASS (%s)", ap_config.ap.ssid, ap_config.ap.password);
+    ESP_LOGI(TAG, "AP SSID (%s) PASS (%s)", ap_config.ap.ssid, ap_config.ap.password);
     ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config))
 
     return ESP_OK;
@@ -229,52 +241,52 @@ esp_err_t init_wifi()
     return ESP_OK;
 }
 
-// esp_err_t init_wifi_netif()
-// {
-//     ESP_LOGI(TAG, "Initializing Wifi Interfaces...");
+esp_err_t wifi_scan()
+{
+    ESP_LOGI(TAG, "Starting Wifi Scan...");
+    static wifi_scan_config_t scanConf = {
+        .ssid = NULL,
+        .bssid = NULL,
+        .channel = 0,
+        .show_hidden = false,
+        .scan_type = WIFI_SCAN_TYPE_ACTIVE,
+		.scan_time.active.min = 120,
+		.scan_time.active.max = 150,
+    };
 
-//     if( wifi_mode != WIFI_MODE_STA && wifi_mode != WIFI_MODE_APSTA )
-//         return WIFI_ERR_MODE_NULL;
-    
-//     ERROR_CHECK(esp_netif_init())
-//     ERROR_CHECK(esp_event_loop_create_default())
+    ERROR_CHECK(esp_wifi_scan_start(&scanConf, false))
+    xEventGroupClearBits(s_wifi_event_group, SCAN_FINISHED_BIT);
 
-//     ERROR_CHECK(init_wifi_sta_netif())
+    return ESP_OK;
+}
 
-//     if(wifi_mode == WIFI_MODE_APSTA ){
-//         ERROR_CHECK(init_wifi_ap_netif())
-//     }
- 
-//     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
-//     esp_wifi_init(&init_cfg);
+wifi_ap_record_t* get_scan_results(){
+    xEventGroupWaitBits(s_wifi_event_group, SCAN_FINISHED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    return ap_list;
+}
 
-//     ERROR_CHECK(update_sta_config())
-//     ERROR_CHECK(update_ap_config())
+esp_err_t attempt_to_connect(bool* result){
+    if( !result )
+        return ESP_ERR_INVALID_ARG;
 
-//     return ESP_OK;
-// }
+    // Disconnect if already connected to AP
+    if(CONNECTED_BIT & xEventGroupGetBits(s_wifi_event_group))
+    {
+        ESP_ERROR_CHECK(esp_wifi_disconnect());
+        xEventGroupWaitBits(s_wifi_event_group, DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    }
 
-// esp_err_t wifi_start()
-// {
-//     ESP_LOGI(TAG, "Starting Wifi");
+    // Clear status and attempt to connect
+    xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT | DISCONNECTED_BIT);
+    ERROR_CHECK(esp_wifi_connect())
 
-//     if( !wifi_sta_netif )
-//         return WIFI_ERR_NULL_NETIF;
+    uint32_t status = xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT | DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    if( status & CONNECTED_BIT )
+        *result = true;
+    else if ( status & DISCONNECTED_BIT )
+        *result = false;
+    else
+        return ESP_FAIL;
 
-//     if(wifi_mode == WIFI_MODE_APSTA ){
-//         if( !wifi_ap_netif )
-//             return WIFI_ERR_NULL_NETIF;
-//     }
-
-//     ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL))
-//     ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
-//     ERROR_CHECK(esp_wifi_set_mode(wifi_mode))
-//     ERROR_CHECK(esp_wifi_start())
-//     return ESP_OK;
-// }
-
-// esp_err_t set_wifi_mode(wifi_mode_t mode)
-// {
-//     wifi_mode = mode;
-//     return ESP_OK;
-// }
+    return ESP_OK;
+}
