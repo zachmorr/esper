@@ -4,6 +4,7 @@
         "esp_wifi.h": "c",
         "chrono": "c",
         "algorithm": "c",
-        "esp_log.h": "c"
+        "esp_log.h": "c",
+        "*.inc": "c"
     }
 }

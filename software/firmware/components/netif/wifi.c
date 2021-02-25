@@ -14,12 +14,6 @@ const int SCAN_FINISHED = BIT0;
 const int DISCONNECTED = BIT1;
 const int CONNECTED = BIT2;
 
-static esp_netif_t* wifi_sta_netif = NULL;
-static esp_netif_t* wifi_ap_netif = NULL;
-
-static wifi_config_t sta_config = {0};
-static wifi_config_t ap_config = {0};
-
 static wifi_ap_record_t ap_list[MAX_SCAN_RECORDS];
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
@@ -104,84 +98,51 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
 }
 
-static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+esp_err_t init_wifi_sta_netif(esp_netif_t** sta_netif)
 {
-    switch (event_id) {
-        case IP_EVENT_ETH_GOT_IP:
-            ESP_LOGI(TAG, "IP_EVENT_ETH_GOT_IP");
-            break;
-        case IP_EVENT_STA_GOT_IP:
-            ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");
-            break;
-        case IP_EVENT_STA_LOST_IP:
-            ESP_LOGI(TAG, "IP_EVENT_STA_LOST_IP");
-            break;
-        case IP_EVENT_AP_STAIPASSIGNED:
-            ESP_LOGI(TAG, "IP_EVENT_AP_STAIPASSIGNED");
-            break;
-        default:
-            break;
-    }
-}
+    esp_netif_config_t sta_cfg = {                                                 
+        .base = ESP_NETIF_BASE_DEFAULT_WIFI_STA,      
+        .driver = NULL,                               
+        .stack = ESP_NETIF_NETSTACK_DEFAULT_WIFI_STA, 
+    };
 
-esp_err_t set_sta_config(char* ssid, char* pass)
-{
-    if( ssid == NULL || pass == NULL)
+    *sta_netif = esp_netif_new(&sta_cfg);
+    if( !*sta_netif )
         return ESP_FAIL;
-
-    strcpy((char*)sta_config.sta.ssid, ssid);
-    strcpy((char*)sta_config.sta.password, pass);
-    ESP_LOGI(TAG, "New STA Config");
-    ESP_LOGI(TAG, "SSID (%s) PASS (%s)", sta_config.sta.ssid, sta_config.sta.password);
-
+    
+    ERROR_CHECK(esp_netif_attach_wifi_station(*sta_netif))
+    ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers())
+    // ERROR_CHECK(update_sta_config())
     return ESP_OK;
 }
 
-esp_err_t update_sta_config()
+esp_err_t init_wifi_ap_netif(esp_netif_t** ap_netif)
 {
-    if( !wifi_sta_netif )
-        return WIFI_ERR_NULL_NETIF;
+    esp_netif_config_t ap_cfg = {                                                 
+        .base = ESP_NETIF_BASE_DEFAULT_WIFI_AP,      
+        .driver = NULL,                               
+        .stack = ESP_NETIF_NETSTACK_DEFAULT_WIFI_AP, 
+    };
 
-    if( strlen((const char*)sta_config.sta.ssid) == 0 )
-    {
-        ESP_LOGD(TAG, "Loading STA config from memory");
-        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &sta_config))
-    }
+    *ap_netif = esp_netif_new(&ap_cfg);
+    if( !*ap_netif )
+        return ESP_FAIL;
+    
+    ERROR_CHECK(esp_netif_attach_wifi_ap(*ap_netif))
+    ERROR_CHECK(esp_wifi_set_default_wifi_ap_handlers())
 
-    ESP_LOGI(TAG, "STA SSID (%s) PASS (%s)", sta_config.sta.ssid, sta_config.sta.password);
-    ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config))
-
-    return ESP_OK;
-}
-
-esp_err_t set_ap_config(char* ssid, char* pass, int connections)
-{
-    ap_config.ap.ssid_len = strlen(ssid);
-    memcpy(ap_config.ap.ssid, ssid, ap_config.ap.ssid_len);
-    strcpy((char*)ap_config.ap.password, pass);
-    ap_config.ap.max_connection = connections;
-
-    ap_config.ap.channel = 1;
-    ap_config.ap.authmode =  WIFI_AUTH_WPA_WPA2_PSK;
-    if (strlen(pass) < 1) {
+    wifi_config_t ap_config = {
+        .ap = {
+            .ssid = CONFIG_AP_SSID,
+            .ssid_len = strlen(CONFIG_AP_SSID),
+            .channel = 1,
+            .password = CONFIG_AP_PASSWORD,
+            .max_connection = CONFIG_AP_CONNECTIONS,
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+        },
+    };
+    if (strlen(CONFIG_AP_PASSWORD) == 0) {
         ap_config.ap.authmode = WIFI_AUTH_OPEN;
-    }
-
-    ESP_LOGI(TAG, "New AP Config");
-    ESP_LOGI(TAG, "SSID (%s) PASS (%s)", ap_config.ap.ssid, ap_config.ap.password);
-
-    return ESP_OK;
-}
-
-esp_err_t update_ap_config()
-{
-    if( !wifi_ap_netif )
-        return WIFI_ERR_NULL_NETIF;
-
-    if( strlen((const char*)ap_config.ap.ssid) == 0 )
-    {
-        ESP_LOGD(TAG, "Loading AP config from memory");
-        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_AP, &ap_config))
     }
 
     ESP_LOGI(TAG, "AP SSID (%s) PASS (%s)", ap_config.ap.ssid, ap_config.ap.password);
@@ -190,49 +151,10 @@ esp_err_t update_ap_config()
     return ESP_OK;
 }
 
-esp_err_t init_wifi_sta_netif()
-{
-    esp_netif_config_t sta_cfg = {                                                 
-        .base = &_g_esp_netif_inherent_sta_config,      
-        .driver = NULL,                               
-        .stack = ESP_NETIF_NETSTACK_DEFAULT_WIFI_STA, 
-    };
-
-    wifi_sta_netif = esp_netif_new(&sta_cfg);
-    if( !wifi_sta_netif )
-        return ESP_FAIL;
-    
-    ERROR_CHECK(esp_netif_attach_wifi_station(wifi_sta_netif))
-    ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers())
-    ERROR_CHECK(update_sta_config())
-    return ESP_OK;
-}
-
-esp_err_t init_wifi_ap_netif()
-{
-    esp_netif_config_t ap_cfg = {                                                 
-        .base = ESP_NETIF_BASE_DEFAULT_WIFI_AP,      
-        .driver = NULL,                               
-        .stack = ESP_NETIF_NETSTACK_DEFAULT_WIFI_AP, 
-    };
-
-    wifi_ap_netif = esp_netif_new(&ap_cfg);
-    if( !wifi_ap_netif )
-        return ESP_FAIL;
-    
-    ERROR_CHECK(esp_netif_attach_wifi_ap(wifi_ap_netif))
-    ERROR_CHECK(esp_wifi_set_default_wifi_ap_handlers())
-
-    return ESP_OK;
-}
-
 esp_err_t init_wifi()
 {
     ESP_LOGI(TAG, "Initializing Wifi");
-    ERROR_CHECK(esp_netif_init())
-    ERROR_CHECK(esp_event_loop_create_default())
     ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL))
-    ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
     wifi_event_group = xEventGroupCreate();
 
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -243,7 +165,7 @@ esp_err_t init_wifi()
 
 esp_err_t wifi_scan()
 {
-    ESP_LOGI(TAG, "Starting Wifi Scan...");
+    ESP_LOGI(TAG, "Starting scan...");
     static wifi_scan_config_t scanConf = {
         .ssid = NULL,
         .bssid = NULL,
@@ -265,7 +187,10 @@ wifi_ap_record_t* scan_results(){
     return ap_list;
 }
 
-esp_err_t attempt_to_connect(bool* result){
+esp_err_t attempt_to_connect(bool* result)
+{
+    ESP_LOGI(TAG, "Attempting to connect to AP");
+
     if( !result )
         return ESP_ERR_INVALID_ARG;
 

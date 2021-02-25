@@ -1,5 +1,7 @@
 #include "wifi_select.h"
-#include "accesspoint.h"
+// #include "accesspoint.h"
+#include "error.h"
+#include "wifi.h"
 #include "esp_wifi.h"
 #include <esp_http_server.h>
 #include "cJSON.h"
@@ -63,7 +65,7 @@ static esp_err_t wifi_json_get_handler(httpd_req_t *req)
         if (strcmp("true", param) == 0)
         {
             ESP_LOGI(TAG, "Starting scan");
-            start_wifi_scan();
+            wifi_scan();
         }
     }
 
@@ -72,9 +74,8 @@ static esp_err_t wifi_json_get_handler(httpd_req_t *req)
     cJSON* ssid_array = cJSON_CreateArray();
     cJSON_AddItemToObject(wifi, "ssid_array", ssid_array);
 
-    wifi_ap_record_t* list;
-    uint16_t count = get_scan_results(&list);
-    for(int i = 0; i < count; i++)
+    wifi_ap_record_t* list = scan_results();
+    for(int i = 0; i < MAX_SCAN_RECORDS; i++)
     {
         cJSON* ssid = cJSON_CreateString((char*)list[i].ssid);
         cJSON_AddItemToArray(ssid_array, ssid);
@@ -135,7 +136,9 @@ static esp_err_t wifi_auth_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "PASS: %s (%d)", (char*)&wifi_config.sta.password, strlen((char*)&wifi_config.sta.password));
 
     // Attempt to connect to network
-    if(test_authentication())
+    bool connected = false;
+    ERROR_CHECK(attempt_to_connect(&connected))
+    if(connected)
     {
         ESP_LOGI(TAG, "Connection Successful");
         httpd_resp_set_status(req, "200 OK");

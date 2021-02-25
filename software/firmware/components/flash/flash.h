@@ -21,7 +21,8 @@ esp_err_t set_network_info(esp_netif_ip_info_t info);
 esp_err_t get_log_data(uint16_t* head, bool* full);
 esp_err_t update_log_data(uint16_t head, bool full);
 esp_err_t initialize_flash();
-esp_err_t check_configuration_status(bool* configured);
+// esp_err_t set_provisioning_status(bool provisioned);
+// bool check_provisioning_status();
 esp_err_t set_defaults();
 esp_err_t reset_device();
 

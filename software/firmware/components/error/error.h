@@ -2,6 +2,9 @@
 #define ERROR_H
 
 #define STRING(x) #x
+
+#define NULL_CHECK(x) if( x == NULL ){ return ESP_FAIL; }
+
 #define ERROR_CHECK(x) do {                                                                 \
             esp_err_t tmp_err = (x);                                                        \
             if (tmp_err != ESP_OK) {                                                        \
@@ -9,6 +12,7 @@
                 return ESP_FAIL;                                                            \
             }                                                                               \
         } while(0);
+
 
 #define WIFI_ERR_BASE               0x200
 #define WIFI_ERR_MODE_NULL          (WIFI_ERR_BASE + 1)

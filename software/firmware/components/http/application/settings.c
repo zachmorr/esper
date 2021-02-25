@@ -2,7 +2,7 @@
 #include "dns.h"
 #include "ota.h"
 #include "flash.h"
-#include "station.h"
+// #include "station.h"
 #include "url.h"
 #include "cJSON.h"
 #include "esp_ota_ops.h"
@@ -151,7 +151,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     nvs_set("update_url", (void*)updatesrv->valuestring, strlen(updatesrv->valuestring)+1);
 
     // Reload things that rely on one of the settings
-    set_static_ip();
+    // set_static_ip();
     set_device_url();
     initialize_upstream_socket();
     check_for_update();

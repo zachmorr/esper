@@ -60,12 +60,7 @@ esp_err_t reset_device()
     
     // uint8_t conf_status = 0;
     // esp_err_t err = nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
-    return nvs_set_u8(nvs, "configured", (uint8_t)false);
-}
-
-esp_err_t check_configuration_status(bool* configured)
-{
-    return nvs_get_u8(nvs, "configured", (uint8_t*)configured);
+    return nvs_set_u8(nvs, "provisioned", (uint8_t)false);
 }
 
 esp_err_t get_network_info(esp_netif_ip_info_t* info)
@@ -108,6 +103,19 @@ esp_err_t update_log_data(uint16_t head, bool full)
     return ESP_OK;
 }
 
+// esp_err_t set_provisioning_status(bool provisioned)
+// {
+//     ERROR_CHECK(nvs_set_u8(nvs, "provisioned", (uint8_t)provisioned))
+
+//     return ESP_OK;
+// }
+
+// bool check_provisioning_status(){
+//     bool provisioned;
+//     ERROR_CHECK(nvs_get_u8(nvs, "provisioned", (uint8_t*)&provisioned))
+//     return provisioned;
+// }
+
 static esp_err_t init_data()
 {
     // Initialize settings
@@ -123,22 +131,16 @@ static esp_err_t init_data()
 #endif
     err |= nvs_set_blob(nvs, "url", CONFIG_DEFAULT_DEVICE_URL, HOSTNAME_STRLEN_MAX);
     err |= nvs_set_blob(nvs, "update_url", CONFIG_DEFAULT_UPDATE_URI, HOSTNAME_STRLEN_MAX + CONFIG_HTTPD_MAX_URI_LEN);
-    err |= nvs_set_u8(nvs, "configured", (uint8_t)false);
+    err |= nvs_set_u8(nvs, "provisioned", (uint8_t)false);
 
     // initialize variables that will be used for circular buffer of logs
     err |= update_log_data(MAX_LOGS, false);
 
     // initialize network info, it will be empty if provisioning is enabled
-    esp_netif_ip_info_t info = {0};
-#ifndef CONFIG_PROVISION_ENABLE
-    ERROR_CHECK(set_sta_config(CONFIG_SSID, CONFIG_PASSWORD))
-    inet_aton(CONFIG_IP, &(info.ip));
-    inet_aton(CONFIG_GW, &(info.gw));
-    inet_aton(CONFIG_NM, &(info.netmask));
-    err |= nvs_set_u8(nvs, "configured", (uint8_t)true);
-#endif
-    err |= set_network_info(info);
-    ERROR_CHECK(set_ap_config(CONFIG_AP_SSID, CONFIG_AP_PASSWORD, CONFIG_AP_CONNECTIONS))
+// #ifndef CONFIG_PROVISION_ENABLE
+//     ERROR_CHECK(set_provisioning_info(CONFIG_IP, CONFIG_GW, CONFIG_NM, CONFIG_SSID, CONFIG_PASSWORD))
+// #endif
+//     ERROR_CHECK(set_ap_config(CONFIG_AP_SSID, CONFIG_AP_PASSWORD, CONFIG_AP_CONNECTIONS))
 
     if( err != ESP_OK ){
         return ESP_FAIL;
@@ -208,7 +210,7 @@ static esp_err_t init_spiffs()
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Spiffs Partition size: total: %d, used: %d", total, used);
+    ESP_LOGD(TAG, "Spiffs Partition size: total: %d, used: %d", total, used);
     return ESP_OK;
 }
 
@@ -230,6 +232,8 @@ esp_err_t initialize_flash()
             return ESP_FAIL;
         }
     }
+
+    ERROR_CHECK(nvs_set_u8(nvs, "provisioned", (uint8_t)false))
 
     ESP_LOGI(TAG, "Flash Initialized");
     return ESP_OK;

@@ -62,7 +62,7 @@ esp_err_t start_configuration_webserver()
     config.uri_match_fn = httpd_uri_match_wildcard;
 
     // Start the httpd server
-    ESP_LOGI(TAG, "Starting HTTP server");
+    ESP_LOGI(TAG, "Starting Configuration HTTP server");
     ESP_ERROR_CHECK(httpd_start(&server, &config));
 
     esp_err_t err = configure_captive_portal_handlers(server);
@@ -77,7 +77,8 @@ esp_err_t start_configuration_webserver()
     return ESP_OK;
 }
 
-void stop_configuration_webserver()
+esp_err_t stop_configuration_webserver()
 {
-    ESP_ERROR_CHECK(httpd_stop(server));
+    ESP_LOGI(TAG, "Stopping Configuration HTTP server");
+    return httpd_stop(server);
 }

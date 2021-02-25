@@ -4,6 +4,6 @@
 #include <esp_http_server.h>
 
 esp_err_t start_configuration_webserver();
-void stop_configuration_webserver();
+esp_err_t stop_configuration_webserver();
 
 #endif
