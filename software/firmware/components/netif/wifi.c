@@ -9,10 +9,10 @@
 #include "esp_log.h"
 static const char *TAG = "WIFI";
 
-static EventGroupHandle_t s_wifi_event_group;
-const int SCAN_FINISHED_BIT = BIT0;
-const int DISCONNECTED_BIT = BIT1;
-const int CONNECTED_BIT = BIT2;
+static EventGroupHandle_t wifi_event_group;
+const int SCAN_FINISHED = BIT0;
+const int DISCONNECTED = BIT1;
+const int CONNECTED = BIT2;
 
 static esp_netif_t* wifi_sta_netif = NULL;
 static esp_netif_t* wifi_ap_netif = NULL;
@@ -20,7 +20,6 @@ static esp_netif_t* wifi_ap_netif = NULL;
 static wifi_config_t sta_config = {0};
 static wifi_config_t ap_config = {0};
 
-static bool scan_finished = false;
 static wifi_ap_record_t ap_list[MAX_SCAN_RECORDS];
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
@@ -36,7 +35,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
             // wifi_event_sta_scan_done_t* event = (wifi_event_sta_scan_done_t*)event_data;
             uint16_t ap_count = MAX_SCAN_RECORDS;
             esp_wifi_scan_get_ap_records(&ap_count, ap_list);
-            xEventGroupSetBits(s_wifi_event_group, SCAN_FINISHED_BIT);
+            xEventGroupSetBits(wifi_event_group, SCAN_FINISHED);
             break;
         }
         case WIFI_EVENT_STA_START:
@@ -53,14 +52,14 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         {
             ESP_LOGI(TAG, "WIFI_EVENT_STA_CONNECTED");
             // (wifi_event_sta_connected_t*)event_data;
-            xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
+            xEventGroupSetBits(wifi_event_group, CONNECTED);
             break;
         }
         case WIFI_EVENT_STA_DISCONNECTED:
         {
             wifi_event_sta_disconnected_t* event = (wifi_event_sta_disconnected_t*) event_data;
             ESP_LOGW(TAG, "WIFI_EVENT_STA_DISCONNECTED %d", event->reason);
-            xEventGroupSetBits(s_wifi_event_group, DISCONNECTED_BIT);
+            xEventGroupSetBits(wifi_event_group, DISCONNECTED);
             // wifi_err_reason_t err;
             break;
         }
@@ -234,6 +233,7 @@ esp_err_t init_wifi()
     ERROR_CHECK(esp_event_loop_create_default())
     ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL))
     ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
+    wifi_event_group = xEventGroupCreate();
 
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
     ERROR_CHECK(esp_wifi_init(&init_cfg))
@@ -255,13 +255,13 @@ esp_err_t wifi_scan()
     };
 
     ERROR_CHECK(esp_wifi_scan_start(&scanConf, false))
-    xEventGroupClearBits(s_wifi_event_group, SCAN_FINISHED_BIT);
+    xEventGroupClearBits(wifi_event_group, SCAN_FINISHED);
 
     return ESP_OK;
 }
 
-wifi_ap_record_t* get_scan_results(){
-    xEventGroupWaitBits(s_wifi_event_group, SCAN_FINISHED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+wifi_ap_record_t* scan_results(){
+    xEventGroupWaitBits(wifi_event_group, SCAN_FINISHED, pdFALSE, pdFALSE, portMAX_DELAY);
     return ap_list;
 }
 
@@ -270,20 +270,20 @@ esp_err_t attempt_to_connect(bool* result){
         return ESP_ERR_INVALID_ARG;
 
     // Disconnect if already connected to AP
-    if(CONNECTED_BIT & xEventGroupGetBits(s_wifi_event_group))
+    if(CONNECTED & xEventGroupGetBits(wifi_event_group))
     {
         ESP_ERROR_CHECK(esp_wifi_disconnect());
-        xEventGroupWaitBits(s_wifi_event_group, DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+        xEventGroupWaitBits(wifi_event_group, DISCONNECTED, pdFALSE, pdFALSE, portMAX_DELAY);
     }
 
     // Clear status and attempt to connect
-    xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT | DISCONNECTED_BIT);
+    xEventGroupClearBits(wifi_event_group, CONNECTED | DISCONNECTED);
     ERROR_CHECK(esp_wifi_connect())
 
-    uint32_t status = xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT | DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
-    if( status & CONNECTED_BIT )
+    uint32_t status = xEventGroupWaitBits(wifi_event_group, CONNECTED | DISCONNECTED, pdFALSE, pdFALSE, portMAX_DELAY);
+    if( status & CONNECTED )
         *result = true;
-    else if ( status & DISCONNECTED_BIT )
+    else if ( status & DISCONNECTED )
         *result = false;
     else
         return ESP_FAIL;

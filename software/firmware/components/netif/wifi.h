@@ -14,7 +14,7 @@ esp_err_t init_wifi_sta_netif();
 esp_err_t init_wifi_ap_netif();
 esp_err_t init_wifi();
 esp_err_t wifi_scan();
-wifi_ap_record_t* get_scan_results();
+wifi_ap_record_t* scan_results();
 esp_err_t attempt_to_connect(bool* result);
 
 #endif
