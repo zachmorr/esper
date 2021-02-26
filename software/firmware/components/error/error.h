@@ -13,6 +13,7 @@
             }                                                                               \
         } while(0);
 
+// #define CHECK_BIT   uint32_t status = xEventGroupWaitBits(ip_event_group, CONNECTED_BIT | DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY); if( status & CONNECTED_BIT ) true;
 
 #define WIFI_ERR_BASE               0x200
 #define WIFI_ERR_MODE_NULL          (WIFI_ERR_BASE + 1)

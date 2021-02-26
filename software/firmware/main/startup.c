@@ -66,8 +66,8 @@ esp_err_t start_provisioning()
     ESP_LOGI(TAG, "Starting provisioning...");
     ERROR_CHECK(turn_on_accesspoint())
     ERROR_CHECK(start_configuration_webserver())
-    ERROR_CHECK(wait_for_provisioning_to_finish())
-
+    
+    xEventGroupWaitBits(ip_event_group, PROVISIONED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
     ERROR_CHECK(stop_configuration_webserver())
     ERROR_CHECK(turn_off_accesspoint())
 

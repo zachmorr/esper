@@ -1,0 +1,1 @@
+ssh -t zach@192.168.2.254 "tmux att -t esp \; send-keys 'esptool.py -p /dev/ttyUSB0 erase_flash' Enter"

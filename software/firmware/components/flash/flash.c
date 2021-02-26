@@ -54,15 +54,6 @@ esp_err_t nvs_get(char* key, void* value, size_t length)
     return ret;
 }
 
-esp_err_t reset_device()
-{
-    ESP_LOGI(TAG, "Reseting Device");
-    
-    // uint8_t conf_status = 0;
-    // esp_err_t err = nvs_set_blob(nvs, "config_status", (void*)&conf_status, sizeof(conf_status));
-    return nvs_set_u8(nvs, "provisioned", (uint8_t)false);
-}
-
 esp_err_t get_network_info(esp_netif_ip_info_t* info)
 {
     size_t length = sizeof(*info);
@@ -103,19 +94,6 @@ esp_err_t update_log_data(uint16_t head, bool full)
     return ESP_OK;
 }
 
-// esp_err_t set_provisioning_status(bool provisioned)
-// {
-//     ERROR_CHECK(nvs_set_u8(nvs, "provisioned", (uint8_t)provisioned))
-
-//     return ESP_OK;
-// }
-
-// bool check_provisioning_status(){
-//     bool provisioned;
-//     ERROR_CHECK(nvs_get_u8(nvs, "provisioned", (uint8_t*)&provisioned))
-//     return provisioned;
-// }
-
 static esp_err_t init_data()
 {
     // Initialize settings
@@ -135,12 +113,8 @@ static esp_err_t init_data()
 
     // initialize variables that will be used for circular buffer of logs
     err |= update_log_data(MAX_LOGS, false);
-
-    // initialize network info, it will be empty if provisioning is enabled
-// #ifndef CONFIG_PROVISION_ENABLE
-//     ERROR_CHECK(set_provisioning_info(CONFIG_IP, CONFIG_GW, CONFIG_NM, CONFIG_SSID, CONFIG_PASSWORD))
-// #endif
-//     ERROR_CHECK(set_ap_config(CONFIG_AP_SSID, CONFIG_AP_PASSWORD, CONFIG_AP_CONNECTIONS))
+    esp_netif_ip_info_t info = {0};
+    ERROR_CHECK(set_network_info(info))
 
     if( err != ESP_OK ){
         return ESP_FAIL;

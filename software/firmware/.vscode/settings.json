@@ -5,6 +5,7 @@
         "chrono": "c",
         "algorithm": "c",
         "esp_log.h": "c",
-        "*.inc": "c"
+        "*.inc": "c",
+        "event_groups.h": "c"
     }
 }
