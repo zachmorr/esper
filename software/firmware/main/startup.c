@@ -1,17 +1,16 @@
 #include "error.h"
-#include "ip.h"
+#include "events.h"
 #include "flash.h"
-// #include "logging.h"
-// #include "datetime.h"
-// #include "gpio.h"
-// #include "station.h"
-// #include "accesspoint.h"
-// #include "dns.h"
-// #include "captive_dns.h"
-#include "configuration.h"
-#include "application.h"
-// #include "url.h"
-// #include "ota.h"
+#include "gpio.h"
+#include "ip.h"
+#include "webserver.h"
+#include "url.h"
+#include "logging.h"
+#include "datetime.h"
+#include "dns.h"
+#include "captive_dns.h"
+#include "ota.h"
+
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 #include "esp_log.h"
@@ -19,44 +18,17 @@
 
 static const char *TAG = "APP_BOOT";
 
-static esp_err_t init_app()
-{
-    // ERROR_CHECK(initialize_gpio())
-    // ERROR_CHECK(set_led_state(STARTUP, SET))
-    // ERROR_CHECK(initialize_flash())
-
-    // bool configured = false;
-    // check_configuration_status(&configured);
-    // if(configured)
-    // {
-    //     ESP_LOGI(TAG, "Already configured, starting application...");
-    //     ERROR_CHECK(initialize_blocklists())
-    //     ERROR_CHECK(initialize_logging())
-    //     ERROR_CHECK(wifi_init_sta())
-    //     ERROR_CHECK(start_application_webserver())
-    //     ERROR_CHECK(initialize_sntp())
-    //     ERROR_CHECK(start_dns())
-    //     start_update_checking_task();
-    //     set_led_state(STARTUP, CLEAR);
-    //     set_led_state(BLOCKING, SET);
-    // }
-    // else
-    // {
-    //     ESP_LOGI(TAG, "Not configured, starting wifi provisioning...");
-    //     ERROR_CHECK(wifi_init_apsta())
-    //     ERROR_CHECK(start_captive_dns())
-    //     ERROR_CHECK(start_configuration_webserver())
-    //     set_led_state(STARTUP, CLEAR);
-    //     set_led_state(CONFIGURING, SET);
-    // }
-
-    return ESP_OK;
-}
 
 esp_err_t initialize()
 {
+    ESP_LOGI(TAG, "Initializing...");
     ERROR_CHECK(initialize_flash())
+    ERROR_CHECK(init_event_group())
+    // ERROR_CHECK(initialize_gpio())
     ERROR_CHECK(initialize_interfaces())
+    // ERROR_CHECK(initialize_blocklists())
+    // ERROR_CHECK(initialize_logging())
+    ERROR_CHECK(start_webserver())
 
     return ESP_OK;
 }
@@ -65,10 +37,11 @@ esp_err_t start_provisioning()
 {
     ESP_LOGI(TAG, "Starting provisioning...");
     ERROR_CHECK(turn_on_accesspoint())
-    ERROR_CHECK(start_configuration_webserver())
-    
-    xEventGroupWaitBits(ip_event_group, PROVISIONED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
-    ERROR_CHECK(stop_configuration_webserver())
+    ERROR_CHECK(start_captive_dns())
+    ERROR_CHECK(start_provisioning_webserver())
+
+    ERROR_CHECK(wait_for(PROVISIONED_BIT, portMAX_DELAY))
+    ERROR_CHECK(stop_provisioning_webserver())
     ERROR_CHECK(turn_off_accesspoint())
 
     return ESP_OK;
@@ -79,6 +52,11 @@ esp_err_t start_application()
     ESP_LOGI(TAG, "Starting application...");
     ERROR_CHECK(start_interfaces())
     // ERROR_CHECK(start_application_webserver())
+
+    ERROR_CHECK(wait_for(CONNECTED_BIT, portMAX_DELAY))
+    // ERROR_CHECK(initialize_sntp())
+    ERROR_CHECK(start_dns())
+    // start_update_checking_task();
 
     return ESP_OK;
 }
@@ -94,10 +72,9 @@ void app_main()
     esp_log_level_set("system_api", ESP_LOG_ERROR);
     esp_log_level_set("esp_eth.netif.glue", ESP_LOG_ERROR);
 
-    ESP_LOGI(TAG, "Starting...");
     esp_err_t err = initialize();
 
-    if( provision_status() == false )
+    if( !check_bit(PROVISIONED_BIT) )
     {
         err |= start_provisioning();
     }

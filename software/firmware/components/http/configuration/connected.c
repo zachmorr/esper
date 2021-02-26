@@ -1,4 +1,5 @@
 #include "connected.h"
+#include "error.h"
 #include "flash.h"
 #include "url.h"
 #include "logging.h"
@@ -37,6 +38,13 @@ static esp_err_t connection_json_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static httpd_uri_t connection_json = {
+    .uri       = "/connection.json",
+    .method    = HTTP_GET,
+    .handler   = connection_json_get_handler,
+    .user_ctx  = ""
+};
+
 static esp_err_t connected_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for /connected");
@@ -52,6 +60,13 @@ static esp_err_t connected_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static httpd_uri_t connected = {
+    .uri       = "/connected",
+    .method    = HTTP_GET,
+    .handler   = connected_get_handler,
+    .user_ctx  = ""
+};
+
 static void restart( TimerHandle_t xTimer )
 {
     ESP_LOGW(TAG, "Restarting...");
@@ -62,24 +77,6 @@ static esp_err_t finish_setup_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Finishing setup");
 
-    // if (store_default_lists() != ESP_OK)
-    // {
-    //     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to create blacklist file");
-    //     return ESP_OK;
-    // }
-
-    // if (create_log_file() != ESP_OK)
-    // {
-    //     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable allocate space for log file");
-    //     return ESP_OK;
-    // }
-
-    // if (set_defaults() != ESP_OK)
-    // {
-    //     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to set default settings");
-    //     return ESP_OK;
-    // }
-
     ESP_LOGI(TAG, "Configuration finished");
     xTimerHandle restartTimer = xTimerCreate("Restart timer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, restart);
     xTimerStart(restartTimer, 0);
@@ -89,31 +86,27 @@ static esp_err_t finish_setup_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static httpd_uri_t finished = {
+    .uri       = "/finish",
+    .method    = HTTP_POST,
+    .handler   = finish_setup_handler,
+    .user_ctx  = ""
+};
+
 esp_err_t configure_connected_handler(httpd_handle_t server)
 {
-    httpd_uri_t connected = {
-        .uri       = "/connected",
-        .method    = HTTP_GET,
-        .handler   = connected_get_handler,
-        .user_ctx  = ""
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &connected));
+    ERROR_CHECK(httpd_register_uri_handler(server, &connected));
+    ERROR_CHECK(httpd_register_uri_handler(server, &connection_json));
+    ERROR_CHECK(httpd_register_uri_handler(server, &finished));
 
-    httpd_uri_t connection_json = {
-        .uri       = "/connection.json",
-        .method    = HTTP_GET,
-        .handler   = connection_json_get_handler,
-        .user_ctx  = ""
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &connection_json));
+    return ESP_OK;
+}
 
-    httpd_uri_t finished = {
-        .uri       = "/finish",
-        .method    = HTTP_POST,
-        .handler   = finish_setup_handler,
-        .user_ctx  = ""
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &finished));
+esp_err_t teardown_connected_handler(httpd_handle_t server)
+{
+    ERROR_CHECK(httpd_unregister_uri_handler(server, connected.uri, connected.method));
+    ERROR_CHECK(httpd_unregister_uri_handler(server, connection_json.uri, connection_json.method));
+    ERROR_CHECK(httpd_unregister_uri_handler(server, finished.uri, finished.method));
 
     return ESP_OK;
 }

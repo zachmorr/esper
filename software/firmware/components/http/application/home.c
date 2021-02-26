@@ -1,4 +1,5 @@
 #include "home.h"
+#include "error.h"
 #include "logging.h"
 #include "datetime.h"
 #include "lwip/inet.h"
@@ -145,6 +146,13 @@ static esp_err_t log_json_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static httpd_uri_t log_json = {
+    .uri       = "/log.json",
+    .method    = HTTP_GET,
+    .handler   = log_json_get_handler,
+    .user_ctx  = ""
+};
+
 static esp_err_t homepage_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for homepage.html");
@@ -160,34 +168,34 @@ static esp_err_t homepage_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-esp_err_t setup_homepage_handlers(httpd_handle_t server){
-    esp_err_t err;
+static httpd_uri_t root = {
+    .uri       = "/",
+    .method    = HTTP_GET,
+    .handler   = homepage_get_handler,
+    .user_ctx  = ""
+};
 
-    httpd_uri_t root = {
-        .uri       = "/",
-        .method    = HTTP_GET,
-        .handler   = homepage_get_handler,
-        .user_ctx  = ""
-    };
-    err = httpd_register_uri_handler(server, &root);
+static httpd_uri_t homepage = {
+    .uri       = "/homepage",
+    .method    = HTTP_GET,
+    .handler   = homepage_get_handler,
+    .user_ctx  = ""
+};
 
-    httpd_uri_t homepage = {
-        .uri       = "/homepage",
-        .method    = HTTP_GET,
-        .handler   = homepage_get_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &homepage);
+esp_err_t setup_homepage_handlers(httpd_handle_t server)
+{
+    ERROR_CHECK(httpd_register_uri_handler(server, &root))
+    ERROR_CHECK(httpd_register_uri_handler(server, &homepage))
+    ERROR_CHECK(httpd_register_uri_handler(server, &log_json))
 
-    httpd_uri_t log_json = {
-        .uri       = "/log.json",
-        .method    = HTTP_GET,
-        .handler   = log_json_get_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &log_json);
-    if( err != ESP_OK )
-        return ESP_FAIL;
+    return ESP_OK;
+}
+
+esp_err_t teardown_homepage_handlers(httpd_handle_t server)
+{
+    ERROR_CHECK(httpd_unregister_uri_handler(server, root.uri, root.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, homepage.uri, homepage.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, log_json.uri, log_json.method))
 
     return ESP_OK;
 }

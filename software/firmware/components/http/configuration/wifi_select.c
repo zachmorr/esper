@@ -25,6 +25,13 @@ static esp_err_t wifi_select_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static httpd_uri_t wifi_select = {
+    .uri       = "/",
+    .method    = HTTP_GET,
+    .handler   = wifi_select_get_handler,
+    .user_ctx  = ""
+};
+
 static esp_err_t wifi_json_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for wifi.json");
@@ -87,7 +94,12 @@ static esp_err_t wifi_json_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-
+static httpd_uri_t wifi_json = {
+    .uri       = "/wifi.json",
+    .method    = HTTP_GET,
+    .handler   = wifi_json_get_handler,
+    .user_ctx  = ""
+};
 
 static esp_err_t wifi_auth_handler(httpd_req_t *req)
 {
@@ -129,7 +141,7 @@ static esp_err_t wifi_auth_handler(httpd_req_t *req)
     wifi_config_t wifi_config = {0};
     strcpy((char*)wifi_config.sta.ssid, ssid->valuestring);
     strcpy((char*)wifi_config.sta.password, pass->valuestring);
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+    ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     cJSON_Delete(json);
 
     ESP_LOGI(TAG, "SSID: %s (%d)", (char*)&wifi_config.sta.ssid, strlen((char*)&wifi_config.sta.ssid));
@@ -154,31 +166,27 @@ static esp_err_t wifi_auth_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static httpd_uri_t submit = {
+    .uri       = "/submitauth",
+    .method    = HTTP_POST,
+    .handler   = wifi_auth_handler,
+    .user_ctx  = ""
+};
+
 esp_err_t configure_wifi_select_handler(httpd_handle_t server)
 {
-    httpd_uri_t wifi_select = {
-        .uri       = "/",
-        .method    = HTTP_GET,
-        .handler   = wifi_select_get_handler,
-        .user_ctx  = ""
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &wifi_select));
+    ERROR_CHECK(httpd_register_uri_handler(server, &wifi_select))
+    ERROR_CHECK(httpd_register_uri_handler(server, &wifi_json))
+    ERROR_CHECK(httpd_register_uri_handler(server, &submit))
 
-    httpd_uri_t wifi_json = {
-        .uri       = "/wifi.json",
-        .method    = HTTP_GET,
-        .handler   = wifi_json_get_handler,
-        .user_ctx  = ""
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &wifi_json));
+    return ESP_OK;
+}
 
-    httpd_uri_t submit = {
-        .uri       = "/submitauth",
-        .method    = HTTP_POST,
-        .handler   = wifi_auth_handler,
-        .user_ctx  = ""
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &submit));
+esp_err_t teardown_wifi_select_handler(httpd_handle_t server)
+{
+    ERROR_CHECK(httpd_unregister_uri_handler(server, wifi_select.uri, wifi_select.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, wifi_json.uri, wifi_json.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, submit.uri, submit.method))
 
     return ESP_OK;
 }

@@ -1,4 +1,6 @@
 #include "dns.h"
+#include "error.h"
+#include "events.h"
 #include "flash.h"
 #include "url.h"
 #include "logging.h"
@@ -21,11 +23,12 @@ static const char *TAG = "DNS";
 #define PACKET_QUEUE_SIZE 10
 #define CLIENT_QUEUE_SIZE 50
 
-static int sock;
 
-static struct sockaddr_in dns_server_addr;
+static int dns_srv_sock;
+
+static struct sockaddr_in upstream_dns;
 static socklen_t addrlen = sizeof(struct sockaddr_in);
-static SemaphoreHandle_t dns_server_mutex;
+static SemaphoreHandle_t upstream_dns_mutex;
 
 static bool blocking_status = true;
 static SemaphoreHandle_t blocking_mutex;
@@ -39,49 +42,116 @@ static Client client_queue[CLIENT_QUEUE_SIZE];
 static char device_url[MAX_URL_LENGTH];
 
 
-esp_err_t set_device_url(){
+esp_err_t load_device_url(){
     nvs_get("url", (void*)device_url, 0);
     return ESP_OK;
 }
 
-esp_err_t initialize_upstream_socket()
-{
-    char upstream_server[IP4ADDR_STRLEN_MAX];
-    nvs_get("upstream_server", (void*)upstream_server, IP4ADDR_STRLEN_MAX);
-
-    xSemaphoreTake(dns_server_mutex, portMAX_DELAY);
-
-    dns_server_addr.sin_family = PF_INET;
-    dns_server_addr.sin_port = htons(DNS_PORT);
-    ip4addr_aton(upstream_server, (ip4_addr_t *)&dns_server_addr.sin_addr.s_addr);
-    ESP_LOGI(TAG, "DNS Server Address: %s", inet_ntoa(dns_server_addr.sin_addr.s_addr));
-
-    xSemaphoreGive(dns_server_mutex);
-
-    return ESP_OK;
-}
-
-static esp_err_t initialize_socket()
+static esp_err_t initialize_dns_server_socket(int* sock)
 {
     ESP_LOGV(TAG, "Initializing Socket");
-	if((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-	{
-		ESP_LOGW(TAG, "Failed To Create Socket");
-		return ESP_FAIL;
-	}
+	if((*sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+		return DNS_ERR_SOCKET_INIT;
 
     struct sockaddr_in my_addr;
 	my_addr.sin_family = AF_INET;
     my_addr.sin_port = htons(DNS_PORT);
     my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if(bind(sock, (struct sockaddr *)&my_addr, sizeof(my_addr)) < 0)
-    {
-    	ESP_LOGW(TAG, "Failed To Bind Socket");
-    	return ESP_FAIL;
-    }
+    if(bind(*sock, (struct sockaddr *)&my_addr, sizeof(my_addr)) < 0)
+    	return DNS_ERR_SOCKET_INIT;
 
     return ESP_OK;
+}
+
+esp_err_t load_upstream_dns()
+{
+    char upstream_server[IP4ADDR_STRLEN_MAX];
+    nvs_get("upstream_server", (void*)upstream_server, IP4ADDR_STRLEN_MAX);
+
+    xSemaphoreTake(upstream_dns_mutex, portMAX_DELAY);
+
+    upstream_dns.sin_family = PF_INET;
+    upstream_dns.sin_port = htons(DNS_PORT);
+    ip4addr_aton(upstream_server, (ip4_addr_t *)&upstream_dns.sin_addr.s_addr);
+    ESP_LOGI(TAG, "DNS Server Address: %s", inet_ntoa(upstream_dns.sin_addr.s_addr));
+
+    xSemaphoreGive(upstream_dns_mutex);
+
+    return ESP_OK;
+}
+
+static IRAM_ATTR void listening_t(void* paramerters)
+{
+    ESP_LOGI(TAG, "Listening...");
+    while(1)
+    {
+        Packet* packet = malloc(sizeof(*packet));
+        packet->length = recvfrom(dns_srv_sock, packet->data, MAX_PACKET_SIZE, 0, (struct sockaddr *)&(packet->src_address), &addrlen);
+        if( packet->length < 1 )
+        {
+            ESP_LOGW(TAG, "Error Receiving Packet");
+        }
+
+        ESP_LOGD(TAG, "Received %d Byte Packet from %s", packet->length, inet_ntoa(packet->src_address.sin_addr.s_addr));
+        packet->recv_timestamp = esp_timer_get_time();
+
+        if( xQueueSend(packet_queue, &packet, 0) == errQUEUE_FULL )
+        {
+            ESP_LOGW(TAG, "Queue Full, could not add packet");
+        }
+    }
+}
+
+static IRAM_ATTR esp_err_t parse_packet(DNS_Packet* dns_packet, Packet* packet)
+{
+    dns_packet->header = (DNS_Header*)packet->data;
+    dns_packet->qname = (char*)(packet->data + sizeof(DNS_Header));
+
+    if( strlen(dns_packet->qname) > MAX_URL_LENGTH)
+        return DNS_ERR_INVALID_QNAME;
+
+    dns_packet->query = (Query*)(dns_packet->qname + strlen(dns_packet->qname) + 1);
+
+    ESP_LOGI(TAG, "Query: (%d)", sizeof(Query));
+    ESP_LOGI(TAG, "ID      (%d)", dns_packet->header->id);
+    ESP_LOGI(TAG, "QR      (%d)", dns_packet->header->qr);
+    ESP_LOGI(TAG, "QNAME   (%s)(%d)", dns_packet->qname, strlen(dns_packet->qname));
+    ESP_LOGI(TAG, "QTYPE   (%d)", ntohs(dns_packet->query->qtype));
+
+    return ESP_OK;
+}
+
+static IRAM_ATTR void dns_t(void* paramerters)
+{
+    ESP_LOGI(TAG, "Starting DNS task");
+    Packet* packet;
+    while(1) 
+    {
+        if( packet )
+            free(packet);
+
+        BaseType_t xErr = xQueueReceive(packet_queue, &packet, portMAX_DELAY);
+        if(xErr == pdFALSE)
+        {
+            ESP_LOGI(TAG, "Error receiving from queue");
+            continue;
+        }
+
+        DNS_Packet dns_packet;
+        if( parse_packet(&dns_packet, packet) != ESP_OK )
+        {
+            ESP_LOGI(TAG, "Error parsing packet");
+            continue;
+        }
+
+        URL url = convert_qname_to_url(dns_packet.qname);
+        if(memcmp(url.string, device_url, url.length) == 0 || check_bit(PROVISIONING_BIT))
+        {
+            ESP_LOGW(TAG, "DNS request for esper");
+        }
+
+    }
 }
 
 static IRAM_ATTR void listening_task(void* paramerters)
@@ -89,29 +159,19 @@ static IRAM_ATTR void listening_task(void* paramerters)
     ESP_LOGI(TAG, "Listening...");
     while(1)
     {
-        //uint8_t buf[MAX_PACKET_SIZE] = {0};
         Packet packet = {0};
-        uint32_t recvlen = recvfrom(sock, packet.data, MAX_PACKET_SIZE, 0, (struct sockaddr *)&packet.src_address, &addrlen);
-        if(recvlen > 0)
+        packet.length = recvfrom(dns_srv_sock, packet.data, MAX_PACKET_SIZE, 0, (struct sockaddr *)&packet.src_address, &addrlen);
+        if( packet.length < 1 )
         {
-            ESP_LOGD(TAG, "Received %d Byte Packet from %s", recvlen, inet_ntoa(packet.src_address.sin_addr.s_addr));
-            packet.length = recvlen;
-            packet.recv_timestamp = esp_timer_get_time();
-
-            BaseType_t err = xQueueSend(packet_queue, &packet, 0);
-            if(err == errQUEUE_FULL)
-            {
-                ESP_LOGW(TAG, "Queue Full, could not add packet");
-            }
-            else
-            {
-                ESP_LOGV(TAG, "Packet Added to Queue");
-            }
-        } 
-        else
-        {
-            // handle errors here
             ESP_LOGW(TAG, "Error Receiving Packet");
+        }
+
+        ESP_LOGD(TAG, "Received %d Byte Packet from %s", packet.length, inet_ntoa(packet.src_address.sin_addr.s_addr));
+        packet.recv_timestamp = esp_timer_get_time();
+
+        if( xQueueSend(packet_queue, &packet, 0) == errQUEUE_FULL )
+        {
+            ESP_LOGW(TAG, "Queue Full, could not add packet");
         }
     }
 }
@@ -143,7 +203,7 @@ static IRAM_ATTR esp_err_t block_query(DNS_Header* header, Packet* packet, uint1
         ESP_LOGD(TAG, "Sending fake AAAA record to %s",inet_ntoa(packet->src_address.sin_addr.s_addr));
     }
 
-    int sendlen = sendto(sock, answer_packet, len, 0, 
+    int sendlen = sendto(dns_srv_sock, answer_packet, len, 0, 
                         (struct sockaddr *)&packet->src_address, addrlen);
     if(sendlen <= 0)
     {
@@ -196,7 +256,7 @@ static IRAM_ATTR esp_err_t redirect_response(DNS_Header* header, Packet* packet,
         ESP_LOGD(TAG, "Sending fake AAAA record");
     }
 
-    int sendlen = sendto(sock, answer_packet, len, 0, 
+    int sendlen = sendto(dns_srv_sock, answer_packet, len, 0, 
                         (struct sockaddr *)&packet->src_address, addrlen);
     if(sendlen <= 0)
     {
@@ -211,11 +271,11 @@ static IRAM_ATTR esp_err_t redirect_response(DNS_Header* header, Packet* packet,
 
 static IRAM_ATTR esp_err_t forward_query(DNS_Header* header, Packet* packet)
 {
-    ESP_LOGD(TAG, "Forwarding to %s",  inet_ntoa(dns_server_addr.sin_addr.s_addr));
+    ESP_LOGD(TAG, "Forwarding to %s",  inet_ntoa(upstream_dns.sin_addr.s_addr));
 
-    xSemaphoreTake(dns_server_mutex, portMAX_DELAY);
-    int sendlen = sendto(sock, packet->data, packet->length, 0, (struct sockaddr *)&dns_server_addr, addrlen);
-    xSemaphoreGive(dns_server_mutex);
+    xSemaphoreTake(upstream_dns_mutex, portMAX_DELAY);
+    int sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&upstream_dns, addrlen);
+    xSemaphoreGive(upstream_dns_mutex);
 
     if(sendlen <= 0)
     {
@@ -245,7 +305,7 @@ static IRAM_ATTR esp_err_t forward_answer(DNS_Header* header, Packet* packet, UR
             ESP_LOGD(TAG, "Answer for %*s to %s", url->length, url->string, 
                         inet_ntoa(client_queue[i].src_address.sin_addr.s_addr));
 
-            int sendlen = sendto(sock, packet->data, packet->length, 0, 
+            int sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, 
                                 (struct sockaddr *)&client_queue[i].src_address, addrlen);
 
             if(sendlen <= 0)
@@ -301,7 +361,7 @@ IRAM_ATTR uint8_t parse_query(Packet* packet, DNS_Query* query)
     return 1;
 }
 
-static IRAM_ATTR void dns_task(void* nvs_h)
+static IRAM_ATTR void dns_task(void* paramerters)
 {
     while(1)
     {
@@ -372,17 +432,15 @@ esp_err_t start_dns()
 {
     ESP_LOGI(TAG, "Starting DNS Task");
     blocking_mutex = xSemaphoreCreateMutex();
-    dns_server_mutex = xSemaphoreCreateMutex();
-    packet_queue = xQueueCreate(PACKET_QUEUE_SIZE, sizeof(Packet));
+    upstream_dns_mutex = xSemaphoreCreateMutex();
+    packet_queue = xQueueCreate(PACKET_QUEUE_SIZE, sizeof(Packet*));
 
-    esp_err_t err = initialize_socket();
-    err |= initialize_upstream_socket();
-    err |= set_device_url();
-    if( err != ESP_OK )
-        return ESP_FAIL;
+    ERROR_CHECK(initialize_dns_server_socket(&dns_srv_sock))
+    ERROR_CHECK(load_upstream_dns())
+    ERROR_CHECK(load_device_url())
 
-    BaseType_t xErr = xTaskCreatePinnedToCore(listening_task, "listening_task", 8000, NULL, 9, &listening, 1);
-    xErr &= xTaskCreatePinnedToCore(dns_task, "dns_task", 16000, NULL, 9, &dns, 1);
+    BaseType_t xErr = xTaskCreatePinnedToCore(listening_t, "listening_task", 8000, NULL, 9, &listening, 1);
+    xErr &= xTaskCreatePinnedToCore(dns_t, "dns_task", 16000, NULL, 9, &dns, 1);
     if( xErr != pdPASS )
         return ESP_FAIL;
 

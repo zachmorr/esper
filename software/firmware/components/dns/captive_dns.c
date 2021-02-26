@@ -1,4 +1,6 @@
 #include "captive_dns.h"
+#include "ip.h"
+#include "error.h"
 #include "dns.h"
 #include "url.h"
 

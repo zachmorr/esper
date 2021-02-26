@@ -1,8 +1,7 @@
-idf_component_register( SRCS            "application/application.c"
+idf_component_register( SRCS            "webserver.c"
                                         "application/home.c"
                                         "application/blacklist.c"
                                         "application/settings.c"
-                                        "configuration/configuration.c"
                                         "configuration/wifi_select.c"
                                         "configuration/connected.c"
 

@@ -55,7 +55,7 @@ static void button_task(void* args)
             if( length > 5000 )
             {
                 ESP_LOGW(TAG, "Resetting device");
-                ESP_ERROR_CHECK(reset_device());
+                // ESP_ERROR_CHECK(reset_device());
                 esp_restart();
             }
             // else if (length > 200 )

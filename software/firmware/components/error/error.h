@@ -13,7 +13,6 @@
             }                                                                               \
         } while(0);
 
-// #define CHECK_BIT   uint32_t status = xEventGroupWaitBits(ip_event_group, CONNECTED_BIT | DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY); if( status & CONNECTED_BIT ) true;
 
 #define WIFI_ERR_BASE               0x200
 #define WIFI_ERR_MODE_NULL          (WIFI_ERR_BASE + 1)
@@ -34,5 +33,9 @@
 #define IO_ERR_BASE                 0x500
 #define IO_ERR_BUTTON_INIT          (IO_ERR_BASE + 1)
 #define IO_ERR_LED_INIT             (IO_ERR_BASE + 2)
+
+#define DNS_ERR_BASE                 0x600
+#define DNS_ERR_SOCKET_INIT          (DNS_ERR_BASE + 1)
+#define DNS_ERR_INVALID_QNAME          (DNS_ERR_BASE + 2)
 
 #endif

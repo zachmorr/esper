@@ -1,4 +1,5 @@
 #include "wifi.h"
+#include "events.h"
 #include "ip.h"
 #include "error.h"
 #include "string.h"
@@ -29,7 +30,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
             // wifi_event_sta_scan_done_t* event = (wifi_event_sta_scan_done_t*)event_data;
             uint16_t ap_count = MAX_SCAN_RECORDS;
             esp_wifi_scan_get_ap_records(&ap_count, ap_list);
-            xEventGroupSetBits(ip_event_group, SCAN_FINISHED_BIT);
+            set_bit(SCAN_FINISHED_BIT);
             break;
         }
         case WIFI_EVENT_STA_START:
@@ -46,7 +47,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         {
             ESP_LOGI(TAG, "WIFI_EVENT_STA_CONNECTED");
             // (wifi_event_sta_connected_t*)event_data;
-            // xEventGroupSetBits(ip_event_group, CONNECTED_BIT);
+            // ERROR_CHECK(set_bit(CONNECTED_BIT);
             break;
         }
         case WIFI_EVENT_STA_DISCONNECTED:
@@ -132,18 +133,14 @@ esp_err_t init_wifi_ap_netif(esp_netif_t** ap_netif)
 
     wifi_config_t ap_config = {
         .ap = {
-            .ssid = CONFIG_AP_SSID,
-            .ssid_len = strlen(CONFIG_AP_SSID),
+            .ssid = "esper",
+            .ssid_len = 5,
             .channel = 1,
-            .password = CONFIG_AP_PASSWORD,
-            .max_connection = CONFIG_AP_CONNECTIONS,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+            .password = "",
+            .max_connection = 1,
+            .authmode = WIFI_AUTH_OPEN
         },
     };
-    if (strlen(CONFIG_AP_PASSWORD) == 0) {
-        ap_config.ap.authmode = WIFI_AUTH_OPEN;
-    }
-
     ESP_LOGI(TAG, "AP SSID (%s) PASS (%s)", ap_config.ap.ssid, ap_config.ap.password);
     ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config))
 
@@ -175,13 +172,13 @@ esp_err_t wifi_scan()
     };
 
     ERROR_CHECK(esp_wifi_scan_start(&scanConf, false))
-    xEventGroupClearBits(ip_event_group, SCAN_FINISHED_BIT);
+    ERROR_CHECK(clear_bit(SCAN_FINISHED_BIT))
 
     return ESP_OK;
 }
 
 wifi_ap_record_t* scan_results(){
-    xEventGroupWaitBits(ip_event_group, SCAN_FINISHED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    wait_for(SCAN_FINISHED_BIT, portMAX_DELAY);
     return ap_list;
 }
 
@@ -193,20 +190,20 @@ esp_err_t attempt_to_connect(bool* result)
         return ESP_ERR_INVALID_ARG;
 
     // Disconnect if already connected to AP
-    if(CONNECTED_BIT & xEventGroupGetBits(ip_event_group))
+    if( check_bit(CONNECTED_BIT) )
     {
         ESP_ERROR_CHECK(esp_wifi_disconnect());
-        xEventGroupWaitBits(ip_event_group, DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+        ERROR_CHECK(wait_for(DISCONNECTED_BIT, portMAX_DELAY))
     }
 
     // Clear status and attempt to connect
-    xEventGroupClearBits(ip_event_group, CONNECTED_BIT | DISCONNECTED_BIT);
+    ERROR_CHECK(clear_bit(CONNECTED_BIT | DISCONNECTED_BIT))
     ERROR_CHECK(esp_wifi_connect())
 
-    uint32_t status = xEventGroupWaitBits(ip_event_group, CONNECTED_BIT | DISCONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
-    if( status & CONNECTED_BIT )
+    wait_for(CONNECTED_BIT | DISCONNECTED_BIT, portMAX_DELAY);
+    if( check_bit(CONNECTED_BIT) )
         *result = true;
-    else if ( status & DISCONNECTED_BIT )
+    else if ( check_bit(DISCONNECTED_BIT) )
         *result = false;
     else
         return ESP_FAIL;

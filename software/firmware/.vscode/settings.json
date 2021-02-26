@@ -6,6 +6,10 @@
         "algorithm": "c",
         "esp_log.h": "c",
         "*.inc": "c",
-        "event_groups.h": "c"
+        "event_groups.h": "c",
+        "freertos.h": "c",
+        "gpio.h": "c",
+        "functional": "c",
+        "ip4.h": "c"
     }
 }

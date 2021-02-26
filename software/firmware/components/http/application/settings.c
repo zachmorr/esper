@@ -1,8 +1,8 @@
 #include "settings.h"
+#include "error.h"
 #include "dns.h"
 #include "ota.h"
 #include "flash.h"
-// #include "station.h"
 #include "url.h"
 #include "cJSON.h"
 #include "esp_ota_ops.h"
@@ -27,6 +27,13 @@ static esp_err_t settings_get_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
+
+static httpd_uri_t settings_get = {
+        .uri       = "/settings",
+        .method    = HTTP_GET,
+        .handler   = settings_get_handler,
+        .user_ctx  = ""
+};
 
 static esp_err_t settings_json_get_handler(httpd_req_t *req)
 {
@@ -74,6 +81,13 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
+
+static httpd_uri_t settings_json_get = {
+    .uri       = "/settings.json",
+    .method    = HTTP_GET,
+    .handler   = settings_json_get_handler,
+    .user_ctx  = ""
+};
 
 static esp_err_t settings_json_post_handler(httpd_req_t *req)
 {
@@ -152,8 +166,8 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
 
     // Reload things that rely on one of the settings
     // set_static_ip();
-    set_device_url();
-    initialize_upstream_socket();
+    load_device_url();
+    load_upstream_dns();
     check_for_update();
 
     httpd_resp_set_status(req, "200 OK");
@@ -162,6 +176,13 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
+
+static httpd_uri_t settings_json_post = {
+    .uri       = "/settings.json",
+    .method    = HTTP_POST,
+    .handler   = settings_json_post_handler,
+    .user_ctx  = ""
+};
 
 static esp_err_t toggle_blocking_handler(httpd_req_t *req){
     ESP_LOGI(TAG, "Request to toggle blocking");
@@ -193,6 +214,13 @@ static esp_err_t toggle_blocking_handler(httpd_req_t *req){
     return ESP_OK;
 }
 
+static httpd_uri_t set_blocking_status = {
+    .uri       = "/toggleblock",
+    .method    = HTTP_POST,
+    .handler   = toggle_blocking_handler,
+    .user_ctx  = ""
+};
+
 static esp_err_t updatefirmware_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for firmware update");
@@ -204,6 +232,13 @@ static esp_err_t updatefirmware_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
+
+static httpd_uri_t update_firmware = {
+    .uri       = "/updatefirmware",
+    .method    = HTTP_POST,
+    .handler   = updatefirmware_handler,
+    .user_ctx  = ""
+};
 
 static esp_err_t ota_status_get_handler(httpd_req_t *req)
 {
@@ -227,58 +262,33 @@ static esp_err_t ota_status_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-esp_err_t setup_settings_handlers(httpd_handle_t server){
-    esp_err_t err;
+static httpd_uri_t ota_status = {
+    .uri       = "/updatestatus",
+    .method    = HTTP_GET,
+    .handler   = ota_status_get_handler,
+    .user_ctx  = ""
+};
 
-    httpd_uri_t settings = {
-        .uri       = "/settings",
-        .method    = HTTP_GET,
-        .handler   = settings_get_handler,
-        .user_ctx  = ""
-    };
-    err = httpd_register_uri_handler(server, &settings);
+esp_err_t setup_settings_handlers(httpd_handle_t server)
+{
+    ERROR_CHECK(httpd_register_uri_handler(server, &settings_get))
+    ERROR_CHECK(httpd_register_uri_handler(server, &settings_json_get))
+    ERROR_CHECK(httpd_register_uri_handler(server, &settings_json_post))
+    ERROR_CHECK(httpd_register_uri_handler(server, &set_blocking_status))
+    ERROR_CHECK(httpd_register_uri_handler(server, &update_firmware))
+    ERROR_CHECK(httpd_register_uri_handler(server, &ota_status))
 
-    httpd_uri_t settings_json_get = {
-        .uri       = "/settings.json",
-        .method    = HTTP_GET,
-        .handler   = settings_json_get_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &settings_json_get);
+    return ESP_OK;
+}
 
-    httpd_uri_t settings_json_post = {
-        .uri       = "/settings.json",
-        .method    = HTTP_POST,
-        .handler   = settings_json_post_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &settings_json_post);
+esp_err_t teardown_settings_handlers(httpd_handle_t server)
+{
+    ERROR_CHECK(httpd_unregister_uri_handler(server, settings_get.uri, settings_get.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, settings_json_get.uri, settings_json_get.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, settings_json_post.uri, settings_json_post.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, set_blocking_status.uri, set_blocking_status.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, update_firmware.uri, update_firmware.method))
+    ERROR_CHECK(httpd_unregister_uri_handler(server, ota_status.uri, ota_status.method))
 
-    httpd_uri_t set_blocking_status = {
-        .uri       = "/toggleblock",
-        .method    = HTTP_POST,
-        .handler   = toggle_blocking_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &set_blocking_status);
-
-    httpd_uri_t update_firmware = {
-        .uri       = "/updatefirmware",
-        .method    = HTTP_POST,
-        .handler   = updatefirmware_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &update_firmware);
-
-    httpd_uri_t ota_status = {
-        .uri       = "/updatestatus",
-        .method    = HTTP_GET,
-        .handler   = ota_status_get_handler,
-        .user_ctx  = ""
-    };
-    err |= httpd_register_uri_handler(server, &ota_status);
-
-    if( err != ESP_OK )
-        return ESP_FAIL;
     return ESP_OK;
 }

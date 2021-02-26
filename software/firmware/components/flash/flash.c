@@ -113,6 +113,8 @@ static esp_err_t init_data()
 
     // initialize variables that will be used for circular buffer of logs
     err |= update_log_data(MAX_LOGS, false);
+
+    // Initialize network info to 0
     esp_netif_ip_info_t info = {0};
     ERROR_CHECK(set_network_info(info))
 
