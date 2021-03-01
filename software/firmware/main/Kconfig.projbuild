@@ -70,55 +70,6 @@ menu "Application Configuration"
         default y
         help
             Turn wifi on
-
-    if WIFI_ENABLE
-        config AP_SSID
-            string "Access Point SSID"
-            default "Esper"
-            help
-                SSID of esper while in provisioning mode
-
-        config AP_PASSWORD
-            string "Access Point Password"
-            default ""
-            help
-                Password of esper while in provisioning mode, empty password is valid
-
-        config AP_CONNECTIONS
-            int "Max Access Point Connections"
-            default 1
-            help
-                Max number of devices that may be connected to Esper while provisioning
-
-        config PROVISION_ENABLE
-            bool "Enable Provisioning"
-            default y
-            help
-                Turn provisioning on
-
-        if !PROVISION_ENABLE
-            config SSID
-                string "SSID"
-                default "WIFI"
-
-            config PASSWORD
-                string "Password"
-                default "Password"
-
-            config IP
-                string "IP Address"
-                default "192.168.1.2"
-
-            config GW
-                string "Gateway"
-                default "192.168.1.1"
-
-            config NM
-                string "Netmask"
-                default "255.255.255.0"
-
-        endif # PROVISION_ENABLE
-    endif # WIFI_ENABLE
  
     menuconfig GPIO_ENABLE
         bool "Enable GPIO"

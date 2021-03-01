@@ -8,7 +8,6 @@
 #include "logging.h"
 #include "datetime.h"
 #include "dns.h"
-#include "captive_dns.h"
 #include "ota.h"
 
 // #include "freertos/FreeRTOS.h"
@@ -29,6 +28,7 @@ esp_err_t initialize()
     // ERROR_CHECK(initialize_blocklists())
     // ERROR_CHECK(initialize_logging())
     ERROR_CHECK(start_webserver())
+    ERROR_CHECK(start_dns())
 
     return ESP_OK;
 }
@@ -36,11 +36,12 @@ esp_err_t initialize()
 esp_err_t start_provisioning()
 {
     ESP_LOGI(TAG, "Starting provisioning...");
+    ERROR_CHECK(set_bit(PROVISIONING_BIT))
     ERROR_CHECK(turn_on_accesspoint())
-    ERROR_CHECK(start_captive_dns())
     ERROR_CHECK(start_provisioning_webserver())
 
     ERROR_CHECK(wait_for(PROVISIONED_BIT, portMAX_DELAY))
+    ERROR_CHECK(clear_bit(PROVISIONING_BIT))
     ERROR_CHECK(stop_provisioning_webserver())
     ERROR_CHECK(turn_off_accesspoint())
 
@@ -51,13 +52,11 @@ esp_err_t start_application()
 {
     ESP_LOGI(TAG, "Starting application...");
     ERROR_CHECK(start_interfaces())
-    // ERROR_CHECK(start_application_webserver())
+    ERROR_CHECK(start_application_webserver())
 
     ERROR_CHECK(wait_for(CONNECTED_BIT, portMAX_DELAY))
-    // ERROR_CHECK(initialize_sntp())
-    ERROR_CHECK(start_dns())
+    ERROR_CHECK(initialize_sntp())
     // start_update_checking_task();
-
     return ESP_OK;
 }
 

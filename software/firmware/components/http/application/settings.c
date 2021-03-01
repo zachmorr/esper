@@ -1,5 +1,6 @@
 #include "settings.h"
 #include "error.h"
+#include "events.h"
 #include "dns.h"
 #include "ota.h"
 #include "flash.h"
@@ -47,7 +48,7 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    bool blocking = blocking_on();
+    bool blocking = check_bit(BLOCKING_BIT);
     cJSON_AddBoolToObject(json, "blocking", blocking);
 
     esp_netif_ip_info_t info;
@@ -57,15 +58,15 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "ip", ip);
 
     char url[MAX_URL_LENGTH];
-    nvs_get("url", (void*)url, 0);
+    ERROR_CHECK(get_device_url(url))
     cJSON_AddStringToObject(json, "url", url);
 
     char dnssrv[IP4ADDR_STRLEN_MAX];
-    nvs_get("upstream_server", (void*)dnssrv, 0);
+    ERROR_CHECK(get_upstream_dns(dnssrv))
     cJSON_AddStringToObject(json, "dnssrv", dnssrv);
 
-    char updatesrv[MAX_URL_LENGTH+HTTPD_MAX_URI_LEN];
-    nvs_get("update_url", (void*)updatesrv, 0);
+    char updatesrv[MAX_URL_LENGTH];
+    ERROR_CHECK(get_update_url(updatesrv))
     cJSON_AddStringToObject(json, "updatesrv", updatesrv);
     
     const esp_app_desc_t* firmware = esp_ota_get_app_description();
@@ -138,7 +139,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "url: %s", url->valuestring);
-    nvs_set("url", (void*)url->valuestring, strlen(url->valuestring)+1);
+    ERROR_CHECK(set_device_url(url->valuestring))
 
     // Get dnssrv
     cJSON* dnssrv = cJSON_GetObjectItem(json, "dnssrv");
@@ -162,7 +163,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "updatesrv: %s", updatesrv->valuestring);
-    nvs_set("update_url", (void*)updatesrv->valuestring, strlen(updatesrv->valuestring)+1);
+    ERROR_CHECK(set_update_url(updatesrv->valuestring))
 
     // Reload things that rely on one of the settings
     // set_static_ip();
@@ -187,7 +188,7 @@ static httpd_uri_t settings_json_post = {
 static esp_err_t toggle_blocking_handler(httpd_req_t *req){
     ESP_LOGI(TAG, "Request to toggle blocking");
 
-    if ( toggle_blocking() != ESP_OK )
+    if ( toggle_bit(BLOCKING_BIT) != ESP_OK )
     {
         ESP_LOGW(TAG, "Error toggling blocking status");
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error toggling blocking status");
@@ -203,7 +204,7 @@ static esp_err_t toggle_blocking_handler(httpd_req_t *req){
         return ESP_OK;
     }
 
-    bool blocking = blocking_on();
+    bool blocking = check_bit(BLOCKING_BIT);
     cJSON_AddBoolToObject(json, "blocking", blocking);
 
     httpd_resp_set_type(req, "application/json;");

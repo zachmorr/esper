@@ -1,5 +1,6 @@
 #include "eth.h"
 #include "error.h"
+#include "flash.h"
 #include "esp_system.h"
 #include "esp_eth.h"
 #include "esp_netif.h"
@@ -51,41 +52,42 @@ esp_err_t init_eth_netif(esp_netif_t** eth_netif)
 
 esp_err_t init_eth_handle(esp_eth_handle_t* eth_handle)
 {
-#ifdef CONFIG_ETHERNET_ENABLE
-    eth_phy_config_t phy_config =     { 
-        .phy_addr = CONFIG_ETH_PHY_ADDR, 
-        .reset_timeout_ms = 100,         
-        .autonego_timeout_ms = 4000, 
-        .reset_gpio_num = CONFIG_ETH_PHY_RST_GPIO, 
-    };
+    esp_eth_phy_t* phy;
+    uint32_t phy_id = 0, addr = 0, rst = 0, mdc = 0, mdio = 0;
+    get_ethernet_phy_config(&phy_id, &addr, &rst, &mdc, &mdio);
+    
+    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
+    phy_config.phy_addr = addr;
+    phy_config.reset_gpio_num = rst;
 
-
-#ifdef CONFIG_ETH_PHY_LAN8720
-    esp_eth_phy_t *phy = esp_eth_phy_new_lan8720(&phy_config);
-#elif CONFIG_ETH_PHY_IP101
-    esp_eth_phy_t *phy = esp_eth_phy_new_ip101(&phy_config);
-#elif CONFIG_ETH_PHY_RTL8201
-    esp_eth_phy_t *phy = esp_eth_phy_new_rtl8201(&phy_config);
-#elif CONFIG_ETH_PHY_DP83848
-    esp_eth_phy_t *phy = esp_eth_phy_new_dp83848(&phy_config);
-#endif
+    switch(phy_id) {
+        case LAN8720:
+            phy = esp_eth_phy_new_lan8720(&phy_config);
+            break;
+        case IP101:
+            phy = esp_eth_phy_new_ip101(&phy_config);
+            break;
+        case RTL8201:
+            phy = esp_eth_phy_new_rtl8201(&phy_config);
+            break;
+        case DP83848:
+            phy = esp_eth_phy_new_dp83848(&phy_config);
+            break;
+        default:
+            phy = NULL;
+            break;
+    }
     NULL_CHECK(phy)
 
-    eth_mac_config_t mac_config = {
-        .sw_reset_timeout_ms = 100, 
-        .rx_task_stack_size = 4096, 
-        .rx_task_prio = 15,         
-        .smi_mdc_gpio_num = CONFIG_ETH_MDC_GPIO,     
-        .smi_mdio_gpio_num = CONFIG_ETH_MDIO_GPIO,    
-        .flags = 0,               
-    };
+    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    mac_config.smi_mdc_gpio_num = mdc;
+    mac_config.smi_mdio_gpio_num = mdio;
 
     esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_config);
     NULL_CHECK(mac)
 
     esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
     ERROR_CHECK(esp_eth_driver_install(&config, eth_handle))
-#endif
 
     return ESP_OK;
 }

@@ -1,4 +1,6 @@
 #include "gpio.h"
+#include "error.h"
+#include "events.h"
 #include "flash.h"
 #include "dns.h"
 #include "error.h"
@@ -69,7 +71,7 @@ static void button_task(void* args)
             // }
             else
             {
-                toggle_blocking();
+                toggle_bit(BLOCKING_BIT);
             }
         }
     }

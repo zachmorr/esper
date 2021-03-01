@@ -7,8 +7,6 @@
 #define DNS_PORT 53
 
 #define MAX_PACKET_SIZE 512
-#define MAX_QUESTION_SIZE 512
-#define MAX_ANSWER_SIZE 512
 
 #define A_RECORD_ANSWER_SIZE 16
 #define AAAA_RECORD_ANSWER_SIZE 28
@@ -46,38 +44,31 @@ typedef struct{
 } DNS_Header;
 
 typedef struct{
-    DNS_Header* header;
-    char* qname_ptr;
     uint16_t qtype;
     uint16_t qclass;
 } DNS_Query;
 
-typedef struct{
-    uint16_t qtype;
-    uint16_t qclass;
-} Query;
-
-typedef struct{
+typedef struct __attribute__((__packed__)){
+    uint16_t name; // Name can be a 16bit pointer to qname
     uint16_t type;
     uint16_t class;
     uint32_t ttl;
     uint16_t rdlength;
-} Answer;
+    uint32_t rddata;
+} DNS_Answer;
 
 typedef struct {
     DNS_Header* header;
     char* qname;
-    Query* query;
-    char* name;
-    Answer* answer;
-    char* rddata;
+    DNS_Query* query;
 } DNS_Packet;
 
 typedef struct {
-    struct sockaddr_in src_address;
-    uint8_t data[MAX_QUESTION_SIZE+MAX_ANSWER_SIZE];
+    struct sockaddr_in src;
+    uint8_t data[MAX_PACKET_SIZE];
     uint32_t length;
     int64_t recv_timestamp;
+    DNS_Packet dns;
 } Packet;
 
 typedef struct {
@@ -90,8 +81,6 @@ typedef struct {
 esp_err_t load_upstream_dns();
 esp_err_t start_dns();
 IRAM_ATTR uint8_t parse_query(Packet* packet, DNS_Query* query);
-esp_err_t toggle_blocking();
-IRAM_ATTR bool blocking_on();
 esp_err_t load_device_url();
 
 #endif

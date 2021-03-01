@@ -134,29 +134,20 @@ esp_err_t create_log_file()
 {
     ESP_LOGI(TAG, "Creating log file");
     FILE* log = fopen("/spiffs/log", "w");
-    if (log)
-    {
-        // ftruncate not implemented yet
-        ESP_LOGD(TAG, "Expanding log file to %d bytes", MAX_LOGS*sizeof(Log_Entry));
-        Log_Entry entry = {0};
-        for(int i = 0; i < MAX_LOGS; i++)
-        {
-            fwrite(&entry, sizeof(Log_Entry), 1, log);
-        }
-        ESP_LOGD(TAG, "Log file %ld bytes large", ftell(log));
-        fclose(log);
-
-        // uint16_t size = MAX_LOGS; 
-        // bool full = false;
-
-        // nvs_set("log_head", (void*)&size, sizeof(size));
-        // nvs_set("full_flag", (void*)&full, sizeof(full));
-        return ESP_OK;
-    }
-    else
-    {
+    if ( !log )
         return LOG_ERR_LOG_UNAVAILABLE;
+
+    Log_Entry entry = {0};
+    for(int i = 0; i < MAX_LOGS; i++)
+    {
+        fwrite(&entry, sizeof(Log_Entry), 1, log);
     }
+    ESP_LOGD(TAG, "Log file size %ld bytes", ftell(log));
+    fclose(log);
+
+    ERROR_CHECK(update_log_data(MAX_LOGS, false))
+
+    return ESP_OK;
 }
 
 esp_err_t initialize_logging()

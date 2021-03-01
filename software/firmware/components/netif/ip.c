@@ -11,6 +11,9 @@
 #include "esp_log.h"
 static const char *TAG = "IP";
 
+static bool eth_en = false;
+static bool wifi_en = false;
+
 static esp_netif_t* wifi_sta_netif = NULL;
 static esp_netif_t* wifi_ap_netif = NULL;
 static esp_netif_t* eth_netif = NULL;
@@ -35,11 +38,19 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
         case IP_EVENT_STA_GOT_IP:
             ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");
             set_bit(CONNECTED_BIT);
+
+            if( check_bit(PROVISIONING_BIT) )
+            {
+                ESP_LOGI(TAG, "Saving IP");
+                set_network_info(((ip_event_got_ip_t*)event_data)->ip_info);
+            }
+
             break;
         case IP_EVENT_STA_LOST_IP:
             ESP_LOGI(TAG, "IP_EVENT_STA_LOST_IP");
-            set_bit(DISCONNECTED_BIT);
-            clear_bit(CONNECTED_BIT);
+            esp_wifi_connect();
+            // set_bit(DISCONNECTED_BIT);
+            // clear_bit(CONNECTED_BIT);
             break;
         case IP_EVENT_AP_STAIPASSIGNED:
             ESP_LOGI(TAG, "IP_EVENT_AP_STAIPASSIGNED");
@@ -56,29 +67,33 @@ esp_err_t initialize_interfaces()
     esp_event_loop_create_default();
     ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
 
-#ifdef CONFIG_ETHERNET_ENABLE
-    ERROR_CHECK(init_eth())
-    ERROR_CHECK(init_eth_netif(&eth_netif))
-    ERROR_CHECK(init_eth_handle(&eth_handle))
-    ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)))
-    // ERROR_CHECK(esp_eth_start(eth_handle))
-#endif
+    ERROR_CHECK(get_enabled_interfaces(&eth_en, &wifi_en))
+    if( eth_en )
+    {
+        ERROR_CHECK(init_eth())
+        ERROR_CHECK(init_eth_netif(&eth_netif))
+        ERROR_CHECK(init_eth_handle(&eth_handle))
+        ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)))
+    }
 
-#ifdef CONFIG_WIFI_ENABLE
-    ERROR_CHECK(init_wifi())
-    ERROR_CHECK(init_wifi_sta_netif(&wifi_sta_netif))
-    // ERROR_CHECK(esp_wifi_start())
+    if( wifi_en )
+    {
+        ERROR_CHECK(init_wifi())
+        ERROR_CHECK(init_wifi_sta_netif(&wifi_sta_netif))
+        ERROR_CHECK(esp_wifi_start())
 
-    wifi_config_t config = {0};
-    ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &config))
+        wifi_config_t config = {0};
+        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &config))
 
-    if( strlen((const char*)config.ap.ssid) == 0 )
-        ERROR_CHECK(clear_bit(PROVISIONED_BIT);
+        if( strlen((const char*)config.ap.ssid) == 0 )
+            ERROR_CHECK(clear_bit(PROVISIONED_BIT))
+        else
+            ERROR_CHECK(set_bit(PROVISIONED_BIT))
+    }
     else
-        ERROR_CHECK(set_bit(PROVISIONED_BIT);
-#else
-    ERROR_CHECK(set_bit(PROVISIONED_BIT))
-#endif
+    {
+        ERROR_CHECK(set_bit(PROVISIONED_BIT))
+    }
 
     return ESP_OK;
 }
@@ -88,7 +103,6 @@ esp_err_t turn_on_accesspoint()
     ESP_LOGI(TAG, "Turning Accesspoint on");
     ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA))
     ERROR_CHECK(init_wifi_ap_netif(&wifi_ap_netif))
-    ERROR_CHECK(esp_wifi_start())
 
     return ESP_OK;
 }
@@ -118,28 +132,31 @@ esp_err_t set_static_ip(esp_netif_t* interface)
     // Set main DNS provider, used to connected to SNTP server
     esp_netif_dns_info_t dns = {0};
     char upstream_server[IP4ADDR_STRLEN_MAX];
-    nvs_get("upstream_server", (void*)upstream_server, IP4ADDR_STRLEN_MAX);
+    ERROR_CHECK(get_upstream_dns(upstream_server))
     ip4addr_aton(upstream_server, (ip4_addr_t*)&dns.ip.u_addr.ip4);
     dns.ip.type = IPADDR_TYPE_V4;
     
-    ERROR_CHECK(esp_netif_set_dns_info(eth_netif, ESP_NETIF_DNS_MAIN, &dns))
+    ERROR_CHECK(esp_netif_set_dns_info(interface, ESP_NETIF_DNS_MAIN, &dns))
 
     return ESP_OK;
 }
 
 esp_err_t start_interfaces()
 {
-    ESP_LOGI(TAG, "Starting interfaces and assigning static ip");
-#ifdef CONFIG_ETHERNET_ENABLE
-    ERROR_CHECK(esp_eth_start(eth_handle))
-    ERROR_CHECK(set_static_ip(eth_netif))
-#endif
+    ESP_LOGI(TAG, "Starting interfaces");
 
-#ifdef CONFIG_WIFI_ENABLE
-    ERROR_CHECK(set_static_ip(wifi_sta_netif))
-    ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
-    ERROR_CHECK(esp_wifi_start())
-#endif
+    if( eth_en )
+    {
+        ERROR_CHECK(esp_eth_start(eth_handle))
+        ERROR_CHECK(set_static_ip(eth_netif))
+    }
+
+    if( wifi_en )
+    {
+        ERROR_CHECK(set_static_ip(wifi_sta_netif))
+        ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
+        ERROR_CHECK(esp_wifi_connect())
+    }
 
     return ESP_OK;
 }

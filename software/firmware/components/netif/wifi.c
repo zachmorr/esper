@@ -66,6 +66,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         case WIFI_EVENT_AP_START:
         {
             ESP_LOGI(TAG, "WIFI_EVENT_AP_START");
+            wifi_scan();
             break;
         }
         case WIFI_EVENT_AP_STOP:
@@ -192,7 +193,7 @@ esp_err_t attempt_to_connect(bool* result)
     // Disconnect if already connected to AP
     if( check_bit(CONNECTED_BIT) )
     {
-        ESP_ERROR_CHECK(esp_wifi_disconnect());
+        ERROR_CHECK(esp_wifi_disconnect());
         ERROR_CHECK(wait_for(DISCONNECTED_BIT, portMAX_DELAY))
     }
 

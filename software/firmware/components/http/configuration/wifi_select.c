@@ -68,7 +68,7 @@ static esp_err_t wifi_json_get_handler(httpd_req_t *req)
         }
         
         // determine is parameter == true
-        ESP_LOGI(TAG, "Rescan: %s", param);
+        ESP_LOGD(TAG, "Rescan: %s", param);
         if (strcmp("true", param) == 0)
         {
             ESP_LOGI(TAG, "Starting scan");
