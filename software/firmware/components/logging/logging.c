@@ -1,9 +1,11 @@
 #include "logging.h"
 #include "flash.h"
+#include "datetime.h"
 #include "error.h"
 #include "sys/unistd.h"
 #include "unistd.h"
 #include "sys/stat.h"
+#include "lwip/inet.h"
 #include "string.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -15,19 +17,80 @@ static const char *TAG = "LOGGING";
 
 #define LOG_QUEUE_SIZE 50
 static QueueHandle_t log_queue;
-static SemaphoreHandle_t log_mutex;
 static TaskHandle_t logging;
 
-// No need for a tail since it will always be either the same as log_head or the EOF
-static uint16_t log_head;
-static bool full_flag;
-
-esp_err_t get_log_head(uint16_t* head, bool* flag)
+esp_err_t build_log_json(cJSON* json, uint32_t size, uint32_t page)
 {
-    xSemaphoreTake(log_mutex, portMAX_DELAY);
-    *head = log_head;
-    *flag = full_flag;
-    xSemaphoreGive(log_mutex);
+    uint16_t log_head = 0;
+    bool full_flag = false;
+    ERROR_CHECK(get_log_data(&log_head, &full_flag))
+
+    // Determine number of log entries
+    uint16_t log_entries;
+    if (full_flag)
+        log_entries = MAX_LOGS;
+    else
+        log_entries = MAX_LOGS-log_head;
+    ESP_LOGI(TAG, "head=%d full=%d size=%d", log_head, full_flag, log_entries);
+
+    // Check that page & size parameters aren't larger than number of entries
+    if ( log_entries > 0 && (size*page >= log_entries || size > MAX_LOGS) )
+    {
+        ESP_LOGW(TAG, "Page & size out of bounds");
+        return ESP_FAIL;
+    }
+
+    // Create log array object
+    cJSON* log_entry_array = cJSON_CreateArray();
+    if ( json == NULL || log_entry_array == NULL )
+        return ESP_FAIL;
+    cJSON_AddItemToObject(json, "log_entries", log_entry_array);
+
+    // Open log file
+    FILE* log = fopen("/spiffs/log", "r");
+    if (log == NULL)
+    {
+        ESP_LOGW(TAG, "Unable to open log");
+        return ESP_FAIL;
+    }
+
+    // Calculate current cursor position and move to position in file
+    uint16_t current_log_cursor = (log_head + page*size) % MAX_LOGS;
+    fseek(log, current_log_cursor*sizeof(Log_Entry), SEEK_SET);
+    for(int i = 0; (i < size) & (i < log_entries); i++)
+    {
+        // Increment cursor
+        if (current_log_cursor == MAX_LOGS)
+        {
+            if(full_flag)
+            {
+                current_log_cursor = 0;
+                fseek(log, 0, SEEK_SET);
+            }
+            else
+                break;
+        }
+        ESP_LOGV(TAG, "Log cursor: %d(%d)", current_log_cursor, current_log_cursor*sizeof(Log_Entry));
+
+        // Build json entry
+        Log_Entry entry = {0};
+        if( fread(&entry, sizeof(entry), 1, log) > 0 )
+        {
+            cJSON* e = cJSON_CreateObject();
+            if ( e != NULL)
+            {
+                cJSON_AddStringToObject(e, "time", get_time_str(entry.time));
+                cJSON_AddStringToObject(e, "url", entry.url.string);
+                cJSON_AddStringToObject(e, "client", inet_ntoa(entry.client));
+                cJSON_AddBoolToObject(e, "blocked", entry.blocked);
+                cJSON_AddItemToArray(log_entry_array, e);
+            }
+            else
+                ESP_LOGW(TAG, "Error adding entry to json array");
+        }
+        current_log_cursor++;
+    }
+    fclose(log);
 
     return ESP_OK;
 }
@@ -56,77 +119,65 @@ esp_err_t log_query(URL url, bool blocked, uint32_t client)
 
 static void logging_task(void* args)
 {
-    // get_log_values(&log_head, &full_flag);
-    // esp_err_t head_err = nvs_get("log_head", (void*)&log_head, sizeof(log_head));
-    // esp_err_t flag_err = nvs_get("full_flag", (void*)&full_flag, sizeof(full_flag));
-    esp_err_t err = get_log_data(&log_head, &full_flag);
+    ESP_LOGI(TAG, "Logging Task Started");
+    while(1)
+    {
+        xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
+        long start = esp_timer_get_time();
 
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Error getting log buffer info, logging disabled");
-        while(1){ vTaskDelay(10000 / portTICK_PERIOD_MS); }
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Logging Task Started");
-        while(1)
+        uint16_t log_head = 0;
+        bool full_flag = false;
+        get_log_data(&log_head, &full_flag);
+
+        // get all entries waiting to be logged
+        uint8_t entries_in_queue = uxQueueMessagesWaiting(log_queue);
+        ESP_LOGI(TAG, "Adding %d entries to log", entries_in_queue);
+
+        FILE* log = fopen("/spiffs/log", "r+");
+        if( !log )
         {
-            xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
-            long start = esp_timer_get_time();
+            ESP_LOGW(TAG, "Error opening log file");
+            continue;
+        }
 
-            // get all entries waiting to be logged
-            uint8_t entries_in_queue = uxQueueMessagesWaiting(log_queue);
-            ESP_LOGI(TAG, "Adding %d entries to log", entries_in_queue);
-
-            FILE* log = fopen("/spiffs/log", "r+");
-            if(log)
+        for(int i = 0; i < entries_in_queue; i++)
+        {
+            Log_Entry entry = {0};
+            esp_err_t err = xQueueReceive(log_queue, &entry, portMAX_DELAY);
+            if(err == pdFALSE)
             {
-                for(int i = 0; i < entries_in_queue; i++)
-                {
-                    Log_Entry entry = {0};
-                    esp_err_t err = xQueueReceive(log_queue, &entry, portMAX_DELAY);
-                    if(err == pdFALSE)
-                    {
-                        ESP_LOGW(TAG, "Error reading entry %d from log_queue", i);
-                    }
-                    else
-                    {
-                        // Entries are retrieved from queue FIFO (oldest first) so log_head moves backwards to keep newest entries at the front
-                        xSemaphoreTake(log_mutex, portMAX_DELAY);
-                        if(log_head <= 0)  // Reset head position if it is at the end
-                        {
-                            log_head = MAX_LOGS;
-                            full_flag = true;
-                        }
-
-                        log_head--;
-                        ESP_LOGV(TAG, "Adding %*s to log address %d(%d)", entry.url.length, entry.url.string, log_head, log_head*sizeof(Log_Entry));
-
-                        if(fseek(log, log_head*sizeof(Log_Entry), SEEK_SET))
-                            ESP_LOGW(TAG, "Could not fseek to %d(%d)", log_head, log_head*sizeof(Log_Entry));
-
-                        if(fwrite(&entry, sizeof(Log_Entry), 1, log))
-                        {
-                            update_log_data(log_head, full_flag);
-                            // nvs_set("log_head", (void*)&log_head, sizeof(log_head));
-                            // nvs_set("full_flag", (void*)&full_flag, sizeof(full_flag));
-                        }
-                        else
-                        {
-                            ESP_LOGW(TAG, "Error adding %*s to log address %d", entry.url.length, entry.url.string, log_head);
-                        }
-
-                        xSemaphoreGive(log_mutex);
-                    }
-                }
-                fclose(log);
+                ESP_LOGW(TAG, "Error reading entry %d from log_queue", i);
             }
             else
             {
-                ESP_LOGW(TAG, "Error opening log file");
+                // Entries are retrieved from queue FIFO (oldest first) so log_head moves backwards to keep newest entries at the front
+                if(log_head <= 0)  // Reset head position if it is at the end
+                {
+                    log_head = MAX_LOGS;
+                    full_flag = true;
+                }
+
+                log_head--;
+                ESP_LOGV(TAG, "Adding %*s to log address %d(%d)", entry.url.length, entry.url.string, log_head, log_head*sizeof(Log_Entry));
+
+                if(fseek(log, log_head*sizeof(Log_Entry), SEEK_SET))
+                    ESP_LOGW(TAG, "Could not fseek to %d(%d)", log_head, log_head*sizeof(Log_Entry));
+
+                if(fwrite(&entry, sizeof(Log_Entry), 1, log))
+                {
+                    update_log_data(log_head, full_flag);
+                    // nvs_set("log_head", (void*)&log_head, sizeof(log_head));
+                    // nvs_set("full_flag", (void*)&full_flag, sizeof(full_flag));
+                }
+                else
+                {
+                    ESP_LOGW(TAG, "Error adding %*s to log address %d", entry.url.length, entry.url.string, log_head);
+                }
             }
-            ESP_LOGI(TAG, "Time to add log entries: %.2lf ms", (esp_timer_get_time()-start)/1000.0);
         }
+        fclose(log);
+ 
+        ESP_LOGI(TAG, "Time to add log entries: %.2lf ms", (esp_timer_get_time()-start)/1000.0);
     }
 }
 
@@ -152,7 +203,6 @@ esp_err_t create_log_file()
 
 esp_err_t initialize_logging()
 {
-    log_mutex = xSemaphoreCreateMutex();
     log_queue = xQueueCreate(LOG_QUEUE_SIZE, sizeof(Log_Entry));
 
     xTaskCreatePinnedToCore(logging_task, "logging_task", 

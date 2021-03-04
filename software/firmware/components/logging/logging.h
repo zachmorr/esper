@@ -3,6 +3,7 @@
 
 #include <esp_system.h>
 #include "url.h"
+#include "cJSON.h"
 
 #define MAX_LOGS 100
 
@@ -16,10 +17,11 @@ typedef struct {
     bool blocked;
 } Log_Entry;
 
+esp_err_t build_log_json(cJSON* json, uint32_t size, uint32_t page);
 esp_err_t get_log_head(uint16_t* head, bool* flag);
-
 esp_err_t log_query(URL url, bool blocked, uint32_t client);
 esp_err_t create_log_file();
 esp_err_t initialize_logging();
+
 
 #endif

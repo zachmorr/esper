@@ -1,9 +1,9 @@
 #include "home.h"
 #include "error.h"
 #include "logging.h"
-#include "datetime.h"
-#include "lwip/inet.h"
-#include "cJSON.h"
+// #include "datetime.h"
+// #include "lwip/inet.h"
+// #include "cJSON.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
@@ -12,7 +12,7 @@ static const char *TAG = "HTTP";
 
 static esp_err_t log_json_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for log.csv");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     // Default values if query string doesn't exist
@@ -51,91 +51,9 @@ static esp_err_t log_json_get_handler(httpd_req_t *req)
         if (size > 50)
             size = 50;
     }
-    ESP_LOGI(TAG, "Page %d Size %d", page, size);
 
-    // Retreive log information
-    uint16_t log_head; bool full_flag;
-    if (get_log_head(&log_head, &full_flag) != ESP_OK)
-    {
-        ESP_LOGW(TAG, "Unable to get log location");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to get log location");
-        return ESP_OK;
-    }
-
-    // Determine number of log entries
-    uint16_t log_entries = 0;
-    if (full_flag)
-        log_entries = MAX_LOGS;
-    else
-        log_entries = MAX_LOGS-log_head;
-
-    ESP_LOGI(TAG, "Log Info: head=%d full=%d size=%d", log_head, full_flag, log_entries);
-
-    // Check that page & size parameters aren't larger than number of entries
-    if ( log_entries > 0 && (size*page >= log_entries || size > MAX_LOGS) )
-    {
-        ESP_LOGW(TAG, "Page & size out of bounds");
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Page & size out of bounds");
-        return ESP_OK;
-    }
-
-    // Open log file
-    FILE* log = fopen("/spiffs/log", "r");
-    if (log == NULL)
-    {
-        ESP_LOGW(TAG, "Unable to open log");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable open log file");
-        return ESP_OK;
-    }
-
-    // Initialize json object with empty array
     cJSON* json = cJSON_CreateObject();
-    cJSON* log_entry_array = cJSON_CreateArray();
-    if ( json == NULL || log_entry_array == NULL )
-    {
-        cJSON_Delete(json);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error creating JSON object");
-        return ESP_OK;
-    }
-    cJSON_AddItemToObject(json, "log_entries", log_entry_array);
-
-    // Calculate current cursor position and move to position in file
-    uint16_t current_log_cursor = (log_head + page*size) % MAX_LOGS;
-    fseek(log, current_log_cursor*sizeof(Log_Entry), SEEK_SET);
-    for(int i = 0; i < size; i++)
-    {
-        // Increment cursor
-        if (current_log_cursor == MAX_LOGS)
-        {
-            if(full_flag)
-            {
-                current_log_cursor = 0;
-                fseek(log, 0, SEEK_SET);
-            }
-            else
-                break;
-        }
-        ESP_LOGV(TAG, "Log cursor: %d(%d)", current_log_cursor, current_log_cursor*sizeof(Log_Entry));
-
-        // Build json entry
-        Log_Entry entry = {0};
-        if( fread(&entry, sizeof(entry), 1, log) > 0 )
-        {
-            cJSON* e = cJSON_CreateObject();
-            if ( e != NULL)
-            {
-                cJSON_AddStringToObject(e, "time", get_time_str(entry.time));
-                cJSON_AddStringToObject(e, "url", entry.url.string);
-                cJSON_AddStringToObject(e, "client", inet_ntoa(entry.client));
-                cJSON_AddBoolToObject(e, "blocked", entry.blocked);
-                cJSON_AddItemToArray(log_entry_array, e);
-            }
-            else
-                ESP_LOGW(TAG, "Error adding entry to json array");
-        }
-        current_log_cursor++;
-    }
-    fclose(log);
+    ERROR_CHECK(build_log_json(json, size, page))
 
     httpd_resp_set_type(req, "application/json"); 
     httpd_resp_set_status(req, "200 OK");
