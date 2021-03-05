@@ -1,9 +1,8 @@
 #ifndef EVENTS_H
 #define EVENTS_H
 
-// #include "esp_system.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
 
 extern const int SCAN_FINISHED_BIT;
 extern const int CONNECTED_BIT;

@@ -115,6 +115,38 @@ esp_err_t remove_from_blacklist(URL removal)
         return URL_ERR_NOT_FOUND;
 }
 
+esp_err_t build_blacklist_json(cJSON* json)
+{
+    ESP_LOGI(TAG, "%d URLs in blacklist", url_in_blacklist);
+
+    // Initialize json object with empty array
+    cJSON* blacklist_array = cJSON_CreateArray();
+    if ( json == NULL || blacklist_array == NULL )
+    {
+        return ESP_FAIL;
+    }
+    cJSON_AddItemToObject(json, "blacklist", blacklist_array);
+
+    // Add urls in blacklist to json object
+    xSemaphoreTake(blacklist_mutex, portMAX_DELAY);
+    int array_index = 0;
+    for(int i = 0; i < url_in_blacklist; i++)
+    {
+        // Create url struct
+        URL url = {0};
+        url.length = blacklist[array_index];
+        memcpy(url.string, blacklist+array_index+sizeof(url.length), url.length);
+
+        cJSON* str = cJSON_CreateString(url.string);
+        cJSON_AddItemToArray(blacklist_array, str);
+
+        array_index += url.length+sizeof(url.length);
+    }
+    xSemaphoreGive(blacklist_mutex);
+
+    return ESP_OK;
+}
+
 esp_err_t store_default_blacklists()
 {
     ESP_LOGI(TAG, "Saving Blacklist");
@@ -146,9 +178,9 @@ bool valid_url(URL url)
 {
     for(int i = 0; i < url.length; i++)
     {
-        if( (url.string[i] < '0' || url.string[i] > '9') ||
-            (url.string[i] < 'A' || url.string[i] > 'Z') ||
-            (url.string[i] < 'a' || url.string[i] > 'z') ||
+        if( (url.string[i] < '0' || url.string[i] > '9') &&
+            (url.string[i] < 'A' || url.string[i] > 'Z') &&
+            (url.string[i] < 'a' || url.string[i] > 'z') &&
             (url.string[i] != '.' && url.string[i] != '-' && 
              url.string[i] != '*' && url.string[i] != '?'))
         {

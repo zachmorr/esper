@@ -13,41 +13,13 @@ static esp_err_t blacklist_json_get_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Request for blacklist.json");
     long start = esp_timer_get_time();
 
-    int url_in_blacklist;
-    char* blacklist = get_blacklist(&url_in_blacklist);
-    if (blacklist == NULL)
-    {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error retreiving blacklist");
-        return ESP_OK;
-    }
-    ESP_LOGI(TAG, "%d URLs in blacklist", url_in_blacklist);
-
-    // Initialize json object with empty array
     cJSON* json = cJSON_CreateObject();
-    cJSON* blacklist_array = cJSON_CreateArray();
-    if ( json == NULL || blacklist_array == NULL )
+    if( build_blacklist_json(json) != ESP_OK)
     {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error building json");
         cJSON_Delete(json);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error creating JSON object");
         return ESP_OK;
     }
-    cJSON_AddItemToObject(json, "blacklist", blacklist_array);
-
-    // Add urls in blacklist to json object
-    int array_index = 0;
-    for(int i = 0; i < url_in_blacklist; i++)
-    {
-        // Create url struct
-        URL url = {0};
-        url.length = blacklist[array_index];
-        memcpy(url.string, blacklist+array_index+sizeof(url.length), url.length);
-
-        cJSON* str = cJSON_CreateString(url.string);
-        cJSON_AddItemToArray(blacklist_array, str);
-
-        array_index += url.length+sizeof(url.length);
-    }
-    return_blacklist();
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_status(req, "200 OK");

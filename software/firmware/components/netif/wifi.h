@@ -7,11 +7,6 @@
 
 #define MAX_SCAN_RECORDS 5
 
-// extern EventGroupHandle_t wifi_event_group;
-// extern const int SCAN_FINISHED;
-// extern const int DISCONNECTED;
-// extern const int CONNECTED;
-
 esp_err_t init_wifi_sta_netif(esp_netif_t** sta_netif);
 esp_err_t init_wifi_ap_netif(esp_netif_t** ap_netif);
 

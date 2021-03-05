@@ -53,7 +53,12 @@ static esp_err_t log_json_get_handler(httpd_req_t *req)
     }
 
     cJSON* json = cJSON_CreateObject();
-    ERROR_CHECK(build_log_json(json, size, page))
+    if( build_log_json(json, size, page) != ESP_OK)
+    {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error building json");
+        cJSON_Delete(json);
+        return ESP_OK;
+    }
 
     httpd_resp_set_type(req, "application/json"); 
     httpd_resp_set_status(req, "200 OK");

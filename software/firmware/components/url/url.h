@@ -2,18 +2,11 @@
 #define URL_H
 
 #include <esp_system.h>
+#include "cJSON.h"
 
 #define MAX_BLACKLIST_SIZE 50000
 #define MAX_WHITELIST_SIZE 20000
 #define MAX_URL_LENGTH 255
-
-// #define URL_ERR_BASE
-// #define URL_ERR_TOO_LONG 0x200
-// #define URL_ERR_LIST_UNAVAILBLE 0x201
-// #define URL_ERR_LIST_FUll 0x202
-// #define URL_ERR_NOT_FOUND 0x203
-// #define URL_ERR_ALREADY_EXISTS 0x204
-// #define URL_ERR_INVALID_URL 0x205
 
 typedef struct {
     uint8_t length;
@@ -22,8 +15,10 @@ typedef struct {
 
 char* get_blacklist(int* size);
 void return_blacklist();
+
 esp_err_t add_to_blacklist(URL url);
 esp_err_t remove_from_blacklist(URL url);
+esp_err_t build_blacklist_json(cJSON* json);
 
 esp_err_t store_default_blacklists();
 esp_err_t initialize_blocklists();

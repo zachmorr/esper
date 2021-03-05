@@ -1,5 +1,6 @@
 #include "events.h"
 #include "error.h"
+#include "freertos/event_groups.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"

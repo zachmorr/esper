@@ -8,7 +8,7 @@ idf_component_register( SRCS            "webserver.c"
                         INCLUDE_DIRS    "application/include/"
                                         "configuration/include/"
                                         "."
-
+                    
                         PRIV_REQUIRES   netif dns flash logging datetime url spiffs esp_http_server ota json app_update error events
 
                         EMBED_FILES     "configuration/html/wifi_select.html"
