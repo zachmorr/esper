@@ -140,6 +140,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     }
     ESP_LOGI(TAG, "url: %s", url->valuestring);
     ERROR_CHECK(set_device_url(url->valuestring))
+    load_device_url();
 
     // Get dnssrv
     cJSON* dnssrv = cJSON_GetObjectItem(json, "dnssrv");
@@ -151,7 +152,8 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "dnssrv: %s", dnssrv->valuestring);
-    nvs_set("upstream_server", (void*)dnssrv->valuestring, strlen(dnssrv->valuestring)+1);
+    ERROR_CHECK(set_upstream_dns(dnssrv->valuestring))
+    load_upstream_dns();
 
     // Get updatesrv
     cJSON* updatesrv = cJSON_GetObjectItem(json, "updatesrv");
@@ -164,11 +166,6 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     }
     ESP_LOGI(TAG, "updatesrv: %s", updatesrv->valuestring);
     ERROR_CHECK(set_update_url(updatesrv->valuestring))
-
-    // Reload things that rely on one of the settings
-    // set_static_ip();
-    load_device_url();
-    load_upstream_dns();
     check_for_update();
 
     httpd_resp_set_status(req, "200 OK");

@@ -56,7 +56,7 @@ esp_err_t start_application()
 
     ERROR_CHECK(wait_for(CONNECTED_BIT, portMAX_DELAY))
     ERROR_CHECK(initialize_sntp())
-    // start_update_checking_task();
+    start_update_checking_task();
     return ESP_OK;
 }
 

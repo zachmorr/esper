@@ -99,7 +99,30 @@ static IRAM_ATTR void listening_t(void* paramerters)
     }
 }
 
-static IRAM_ATTR esp_err_t capture_query(Packet* packet)
+static IRAM_ATTR esp_err_t forward_query(Packet* packet)
+{
+    xSemaphoreTake(upstream_dns_mutex, portMAX_DELAY);
+    int sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&upstream_dns, addrlen);
+    xSemaphoreGive(upstream_dns_mutex);
+
+    if(sendlen <= 0)
+    {
+        ESP_LOGW(TAG, "Failed to foward request");
+        return ESP_FAIL;
+    }
+    
+    for(int i = CLIENT_QUEUE_SIZE-1; i >= 1; i--) 
+    {
+        client_queue[i] = client_queue[i-1];
+    }
+    client_queue[0].src_address = packet->src;
+    client_queue[0].id = packet->dns.header->id;
+    client_queue[0].response_latency = packet->recv_timestamp;
+
+    return ESP_OK;
+}
+
+static IRAM_ATTR esp_err_t answer_query(Packet* packet, uint32_t ip)
 {
     packet->dns.header->qr = 1; // change packet to answer
     // packet->dns.header->aa = 1; // respect my authoritah
@@ -114,15 +137,8 @@ static IRAM_ATTR esp_err_t capture_query(Packet* packet)
             answer.class = htons(1),
             answer.ttl = htonl(128),
             answer.rdlength = htons(4),
-            answer.rddata = htonl(0xc0a80401) // 192.168.4.1 in hex
+            answer.rddata = htonl(ip)
         };
-
-        if( !check_bit(PROVISIONING_BIT) )
-        {
-            esp_netif_ip_info_t info;
-            get_network_info(&info);
-            answer.rddata = info.ip.addr;
-        }
         
         // write answer to buffer after dns_query
         memcpy(packet->data + packet->length, &answer, sizeof(answer));
@@ -138,6 +154,42 @@ static IRAM_ATTR esp_err_t capture_query(Packet* packet)
     if( sendto(dns_srv_sock, packet->data, packet->length+len, 0, (struct sockaddr *)&packet->src, addrlen) < 1 )
         return ESP_FAIL;
 
+    return ESP_OK;
+}
+
+static IRAM_ATTR esp_err_t capture_query(Packet* packet)
+{
+    uint32_t ip = 0xc0a80401; // 192.168.4.1 in hex
+    if( !check_bit(PROVISIONING_BIT) )
+    {
+        esp_netif_ip_info_t info;
+        get_network_info(&info);
+        ip = info.ip.addr;
+    }
+
+    return answer_query(packet, htonl(ip));
+}
+
+static IRAM_ATTR esp_err_t block_query(Packet* packet)
+{
+    return answer_query(packet, 0);
+}
+
+static IRAM_ATTR esp_err_t forward_answer(Packet* packet)
+{
+    for(int i = 0; i < CLIENT_QUEUE_SIZE; i++)
+    {
+        if(packet->dns.header->id == client_queue[i].id)
+        {
+            if( sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&client_queue[i].src_address, addrlen) < 1 )
+            {
+                ESP_LOGW(TAG, "Failed to forward answer");
+                return ESP_FAIL;
+            }
+
+            break;
+        }
+    }
     return ESP_OK;
 }
 
@@ -185,7 +237,8 @@ static IRAM_ATTR void dns_t(void* paramerters)
         URL url = convert_qname_to_url(packet->dns.qname);
         if( packet->dns.header->qr == ANSWER )
         {
-            ESP_LOGW(TAG, "Forwarding answer for %*s", url.length, url.string);
+            ESP_LOGI(TAG, "Forwarding answer for %*s", url.length, url.string);
+            forward_answer(packet);
         }
         else if( packet->dns.header->qr == QUERY )
         {
@@ -199,7 +252,7 @@ static IRAM_ATTR void dns_t(void* paramerters)
                 }
                 else
                 {
-                    ESP_LOGW(TAG, "Dropping query for %*s", url.length, url.string);
+                    ESP_LOGW(TAG, "Blocking query for %*s", url.length, url.string);
                 }
             }
             else if( qtype == A || qtype == AAAA )
@@ -208,24 +261,31 @@ static IRAM_ATTR void dns_t(void* paramerters)
                 {
                     ESP_LOGW(TAG, "Capturing DNS request %*s", url.length, url.string);
                     capture_query(packet);
+                    log_query(url, false, packet->src.sin_addr.s_addr);
                 }
                 else if( check_bit(BLOCKING_BIT) && in_blacklist(url) )
                 {
                     ESP_LOGW(TAG, "Blocking question for %*s", url.length, url.string);
+                    block_query(packet);
+                    log_query(url, true, packet->src.sin_addr.s_addr);
                 }
                 else
                 {
                     ESP_LOGI(TAG, "Forwarding question for %*s", url.length, url.string);
+                    forward_query(packet);
+                    log_query(url, false, packet->src.sin_addr.s_addr);
                 }
             }
             else
             {
                 ESP_LOGI(TAG, "Forwarding question for %*s", url.length, url.string);
+                forward_query(packet);
+                log_query(url, false, packet->src.sin_addr.s_addr);
             }
-            // log_query(url, false, packet->src.sin_addr.s_addr);
+            
         }
         int64_t end = esp_timer_get_time();
-        ESP_LOGD(TAG, "Processing Time: %lld ms\n", (end-packet->recv_timestamp)/1000);
+        ESP_LOGI(TAG, "Processing Time: %lld ms", (end-packet->recv_timestamp)/1000);
     }
 }
 
@@ -238,6 +298,7 @@ esp_err_t start_dns()
     ERROR_CHECK(initialize_dns_server_socket(&dns_srv_sock))
     ERROR_CHECK(load_upstream_dns())
     ERROR_CHECK(load_device_url())
+    ERROR_CHECK(set_bit(BLOCKING_BIT))
 
     BaseType_t xErr = xTaskCreatePinnedToCore(listening_t, "listening_task", 8000, NULL, 9, &listening, 1);
     xErr &= xTaskCreatePinnedToCore(dns_t, "dns_task", 16000, NULL, 9, &dns, 1);
@@ -246,92 +307,3 @@ esp_err_t start_dns()
 
     return ESP_OK;
 }
-
-// static IRAM_ATTR esp_err_t block_query(DNS_Header* header, Packet* packet, uint16_t qtype)
-// {   
-//     // DNS Answer (0.0.0.0) to send for blacklisted ip4
-//     const char ip4_response[] = "\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x02\x00\x04\x00\x00\x00\x00";
-//     // DNS Answer (::) to send for blacklisted ip6
-//     const char ip6_response[] = "\xc0\x0c\x00\x1c\x00\x01\x00\x00\x00\x02\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-
-//     header->qr = 1; // change packet to answer
-//     header->aa = 1; // respect my authoritah
-//     header->ans_count = htons(1);
-
-//     size_t len = 0;
-//     uint8_t answer_packet[8192];
-//     memcpy(answer_packet, packet->data, packet->length);
-//     if(qtype == A)
-//     {
-//         memcpy(answer_packet+packet->length, ip4_response, A_RECORD_ANSWER_SIZE);
-//         len = packet->length+A_RECORD_ANSWER_SIZE;
-//         ESP_LOGD(TAG, "Sending fake A record to %s",inet_ntoa(packet->src_address.sin_addr.s_addr));
-//     }
-//     else if(qtype == AAAA)
-//     {
-//         memcpy(answer_packet+packet->length, ip6_response, AAAA_RECORD_ANSWER_SIZE);
-//         len = packet->length+AAAA_RECORD_ANSWER_SIZE;
-//         ESP_LOGD(TAG, "Sending fake AAAA record to %s",inet_ntoa(packet->src_address.sin_addr.s_addr));
-//     }
-
-//     int sendlen = sendto(dns_srv_sock, answer_packet, len, 0, 
-//                         (struct sockaddr *)&packet->src_address, addrlen);
-//     if(sendlen <= 0)
-//     {
-//         ESP_LOGW(TAG, "Failed sending fake dns response");
-//     }
-//     else
-//     {
-//         ESP_LOGD(TAG, "Sent");
-//     }
-//     return ESP_OK;
-// }
-
-
-
-// static IRAM_ATTR esp_err_t forward_query(DNS_Header* header, Packet* packet)
-// {
-//     ESP_LOGD(TAG, "Forwarding to %s",  inet_ntoa(upstream_dns.sin_addr.s_addr));
-
-//     xSemaphoreTake(upstream_dns_mutex, portMAX_DELAY);
-//     int sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&upstream_dns, addrlen);
-//     xSemaphoreGive(upstream_dns_mutex);
-
-//     if(sendlen <= 0)
-//     {
-//         ESP_LOGW(TAG, "Failed to foward request");
-//     }
-//     else
-//     {
-//         ESP_LOGD(TAG, "Sent %d bytes", sendlen);
-        
-//         for(int i = CLIENT_QUEUE_SIZE-1; i >= 1; i--) 
-//         {
-//             client_queue[i] = client_queue[i-1];
-//         }
-//         client_queue[0].src_address = packet->src_address;
-//         client_queue[0].id = header->id;
-//         client_queue[0].response_latency = esp_timer_get_time();
-//     }
-//     return ESP_OK;
-// }
-
-// static IRAM_ATTR esp_err_t forward_answer(Packet* packet, URL* url)
-// {
-//     for(int i = 0; i < CLIENT_QUEUE_SIZE; i++)
-//     {
-//         if(header->id == client_queue[i].id)
-//         {
-//             ESP_LOGD(TAG, "Answer for %*s to %s", url->length, url->string, 
-//                         inet_ntoa(client_queue[i].src_address.sin_addr.s_addr));
-
-//             if( sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&client_queue[i].src_address, addrlen) < 1 )
-//             {
-//                 ESP_LOGW(TAG, "Failed to forward answer");
-//             }
-
-//             break;
-//         }
-//     }
-//     return ESP_OK;
-// }

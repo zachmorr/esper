@@ -31,7 +31,7 @@ esp_err_t build_log_json(cJSON* json, uint32_t size, uint32_t page)
         log_entries = MAX_LOGS;
     else
         log_entries = MAX_LOGS-log_head;
-    ESP_LOGI(TAG, "head=%d full=%d size=%d", log_head, full_flag, log_entries);
+    ESP_LOGD(TAG, "head=%d full=%d size=%d", log_head, full_flag, log_entries);
 
     // Check that page & size parameters aren't larger than number of entries
     if ( log_entries > 0 && (size*page >= log_entries || size > MAX_LOGS) )
@@ -131,7 +131,6 @@ static void logging_task(void* args)
 
         // get all entries waiting to be logged
         uint8_t entries_in_queue = uxQueueMessagesWaiting(log_queue);
-        ESP_LOGI(TAG, "Adding %d entries to log", entries_in_queue);
 
         FILE* log = fopen("/spiffs/log", "r+");
         if( !log )
@@ -177,7 +176,7 @@ static void logging_task(void* args)
         }
         fclose(log);
  
-        ESP_LOGI(TAG, "Time to add log entries: %.2lf ms", (esp_timer_get_time()-start)/1000.0);
+        ESP_LOGI(TAG, "Time to add log %d entries: %.2lf ms", entries_in_queue, (esp_timer_get_time()-start)/1000.0);
     }
 }
 
