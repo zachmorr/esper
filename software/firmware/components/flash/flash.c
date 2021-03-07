@@ -150,11 +150,20 @@ esp_err_t get_ethernet_phy_config(uint32_t* phy, uint32_t* addr, uint32_t* rst, 
     return ESP_OK;
 }
 
-static esp_err_t init_keys()
+esp_err_t get_gpio_config(bool* enabled, int* button, int* red, int* green, int* blue)
 {
-    ESP_LOGI(TAG, "Initializing keys in NVS");
+    ERROR_CHECK(nvs_get_i8(nvs, "gpio", (int8_t*)enabled))
+    ERROR_CHECK(nvs_get_i32(nvs, "button", button))
+    ERROR_CHECK(nvs_get_i32(nvs, "red_led", red))
+    ERROR_CHECK(nvs_get_i32(nvs, "green_led", green))
+    ERROR_CHECK(nvs_get_i32(nvs, "blue_led", blue))
 
-    // Initialize settings
+    return ESP_OK;
+}
+
+static esp_err_t init_settings()
+{
+    ESP_LOGI(TAG, "Saving Settings");
 #if CONFIG_UPSTREAM_DNS_GOOGLE
     ERROR_CHECK(nvs_set_str(nvs, "upstream_server", GOOGLE_IP, IP4_STRLEN_MAX))
 #elif CONFIG_UPSTREAM_DNS_CLOUDFARE
@@ -166,8 +175,12 @@ static esp_err_t init_keys()
 #endif
     ERROR_CHECK(nvs_set_str(nvs, "url", CONFIG_DEFAULT_DEVICE_URL))
     ERROR_CHECK(nvs_set_str(nvs, "update_url", CONFIG_DEFAULT_UPDATE_URI))
+    return ESP_OK;
+}
 
-    // Initialize interface settings
+static esp_err_t init_interfaces()
+{
+    ESP_LOGI(TAG, "Saving Interface Configuration");
 #ifdef CONFIG_ETHERNET_ENABLE
     ERROR_CHECK(nvs_set_u8(nvs, "ethernet", true))
     ERROR_CHECK(nvs_set_u32(nvs, "phy_addr", CONFIG_ETH_PHY_ADDR))
@@ -202,16 +215,39 @@ static esp_err_t init_keys()
     esp_netif_ip_info_t info = {0};
     ERROR_CHECK(set_network_info(info))
 
-    ERROR_CHECK(nvs_set_u8(nvs, "initialized", (uint8_t)true))
+    return ESP_OK;
+}
+
+static esp_err_t init_gpio()
+{
+    ESP_LOGI(TAG, "Saving GPIO Configuration");
+#ifdef CONFIG_GPIO_ENABLE
+    ERROR_CHECK(nvs_set_i8(nvs, "gpio", true))
+    ERROR_CHECK(nvs_set_i32(nvs, "button", CONFIG_BUTTON))
+    ERROR_CHECK(nvs_set_i32(nvs, "red_led", CONFIG_RED_LED))
+    ERROR_CHECK(nvs_set_i32(nvs, "green_led", CONFIG_GREEN_LED))
+    ERROR_CHECK(nvs_set_i32(nvs, "blue_led", CONFIG_BLUE_LED))
+#else
+    ERROR_CHECK(nvs_set_i8(nvs, "gpio", false))
+    ERROR_CHECK(nvs_set_i32(nvs, "button", -1))
+    ERROR_CHECK(nvs_set_i32(nvs, "red_led", -1))
+    ERROR_CHECK(nvs_set_i32(nvs, "green_led", -1))
+    ERROR_CHECK(nvs_set_i32(nvs, "blue_led", -1))
+#endif
+
     return ESP_OK;
 }
 
 static esp_err_t first_power_on()
 {
     ESP_LOGI(TAG, "First power up");
-    ERROR_CHECK(init_keys())
+    ERROR_CHECK(init_settings())
+    ERROR_CHECK(init_interfaces())
+    ERROR_CHECK(init_gpio())
     ERROR_CHECK(create_log_file())
     ERROR_CHECK(store_default_blacklists())
+
+    ERROR_CHECK(nvs_set_u8(nvs, "initialized", (uint8_t)true))
     
     return ESP_OK;
 }
@@ -275,6 +311,7 @@ esp_err_t initialize_flash()
 {    
     ERROR_CHECK(init_nvs())
     ERROR_CHECK(init_spiffs())
+
 
     bool initialized = false;
     if( nvs_get_u8(nvs, "initialized", (uint8_t*)&initialized) == ESP_ERR_NVS_NOT_FOUND )

@@ -2,21 +2,10 @@
 #define GPIO_H
 
 #include <esp_system.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-enum state {
-    STARTUP,
-    CONFIGURING,
-    BLOCKING,
-    OTA,
-    ERROR,
-    DISCONNECTED
-};
-
-enum toggle {
-    CLEAR,
-    SET
-};
-
-esp_err_t set_led_state(int state, bool toggle);
+TaskHandle_t getLEDTaskHandle();
 esp_err_t initialize_gpio();
+
 #endif

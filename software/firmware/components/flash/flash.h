@@ -27,6 +27,7 @@ esp_err_t get_network_info(esp_netif_ip_info_t* info);
 esp_err_t set_network_info(esp_netif_ip_info_t info);
 esp_err_t get_enabled_interfaces(bool* eth, bool* wifi);
 esp_err_t get_ethernet_phy_config(uint32_t* phy, uint32_t* addr, uint32_t* rst, uint32_t* mdc, uint32_t* mdio);
+esp_err_t get_gpio_config(bool* enabled, int* button, int* red, int* green, int* blue);
 
 esp_err_t get_log_data(uint16_t* head, bool* full);
 esp_err_t update_log_data(uint16_t head, bool full);

@@ -1,6 +1,8 @@
 #include "events.h"
 #include "error.h"
+#include "gpio.h"
 #include "freertos/event_groups.h"
+#include "freertos/task.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
@@ -14,6 +16,9 @@ const int PROVISIONING_BIT = BIT3;
 const int PROVISIONED_BIT = BIT4;
 const int STATIC_IP_BIT = BIT5;
 const int BLOCKING_BIT = BIT6;
+const int INITIALIZING_BIT = BIT7;
+const int ERROR_BIT = BIT8;
+const int OTA_BIT = BIT9;
 
 esp_err_t init_event_group()
 {
@@ -26,13 +31,29 @@ esp_err_t init_event_group()
 
 esp_err_t set_bit(int bit)
 {
-    xEventGroupSetBits(event_group, bit);
+    if( xEventGroupSetBits(event_group, bit) == pdFALSE )
+    {
+        ESP_LOGD(TAG, "Failed to set bit %X", bit);
+    }
+
+    TaskHandle_t led_task = getLEDTaskHandle();
+    xTaskNotify(led_task, xEventGroupGetBits(event_group), eSetValueWithOverwrite);
+    ESP_LOGD(TAG, "Current state %X", xEventGroupGetBits(event_group));
+
     return ESP_OK;
 }
 
 esp_err_t clear_bit(int bit)
 {
-    xEventGroupClearBits(event_group, bit);
+    if( xEventGroupClearBits(event_group, bit) == pdFALSE )
+    {
+        ESP_LOGD(TAG, "Failed to clear bit %X", bit);
+    }
+
+    TaskHandle_t led_task = getLEDTaskHandle();
+    xTaskNotify(led_task, xEventGroupGetBits(event_group), eSetValueWithOverwrite);
+    ESP_LOGD(TAG, "Current state %X", xEventGroupGetBits(event_group));
+    
     return ESP_OK;
 }
 
@@ -59,4 +80,9 @@ esp_err_t toggle_bit(int bit)
     }
 
     return ESP_OK;
+}
+
+uint32_t get_bits()
+{
+    return xEventGroupGetBits(event_group);
 }

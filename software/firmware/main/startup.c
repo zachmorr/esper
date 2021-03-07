@@ -10,7 +10,7 @@
 #include "dns.h"
 #include "ota.h"
 
-// #include "freertos/FreeRTOS.h"
+#include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 #include "esp_log.h"
 // #include "esp_ota_ops.h"
@@ -18,17 +18,30 @@
 static const char *TAG = "APP_BOOT";
 
 
+esp_err_t set_logging_levels()
+{
+    esp_log_level_set("heap_init", ESP_LOG_ERROR);
+    // esp_log_level_set("spi_flash", ESP_LOG_ERROR);
+    esp_log_level_set("wifi", ESP_LOG_ERROR);
+    esp_log_level_set("wifi_init", ESP_LOG_ERROR);
+    // esp_log_level_set("phy", ESP_LOG_ERROR); 
+    // esp_log_level_set("esp_netif_handlers", ESP_LOG_ERROR);
+    esp_log_level_set("system_api", ESP_LOG_ERROR);
+    esp_log_level_set("esp_eth.netif.glue", ESP_LOG_ERROR);
+
+    return ESP_OK;
+}
+
 esp_err_t initialize()
 {
     ESP_LOGI(TAG, "Initializing...");
-    ERROR_CHECK(initialize_flash())
-    ERROR_CHECK(init_event_group())
-    // ERROR_CHECK(initialize_gpio())
+    ERROR_CHECK(set_bit(INITIALIZING_BIT))
     ERROR_CHECK(initialize_interfaces())
     ERROR_CHECK(initialize_blocklists())
     ERROR_CHECK(initialize_logging())
     ERROR_CHECK(start_webserver())
     ERROR_CHECK(start_dns())
+    ERROR_CHECK(clear_bit(INITIALIZING_BIT))
 
     return ESP_OK;
 }
@@ -62,23 +75,26 @@ esp_err_t start_application()
 
 void app_main()
 {
-    esp_log_level_set("heap_init", ESP_LOG_ERROR);
-    // esp_log_level_set("spi_flash", ESP_LOG_ERROR);
-    esp_log_level_set("wifi", ESP_LOG_ERROR);
-    esp_log_level_set("wifi_init", ESP_LOG_ERROR);
-    // esp_log_level_set("phy", ESP_LOG_ERROR); 
-    // esp_log_level_set("esp_netif_handlers", ESP_LOG_ERROR);
-    esp_log_level_set("system_api", ESP_LOG_ERROR);
-    esp_log_level_set("esp_eth.netif.glue", ESP_LOG_ERROR);
+    set_logging_levels();
+    initialize_flash();
+    initialize_gpio();
+    init_event_group();
 
-    esp_err_t err = initialize();
+    if( initialize() != ESP_OK )
+    {
+        ESP_LOGI(TAG, "Error during initialization, restarting...");
+        vTaskDelay(3000/portTICK_PERIOD_MS);
+        set_bit(ERROR_BIT);
+        esp_restart();
+    }
+
 
     if( !check_bit(PROVISIONED_BIT) )
     {
-        err |= start_provisioning();
+        start_provisioning();
     }
 
-    err |= start_application();
+    start_application();
 
     // const esp_partition_t *running = esp_ota_get_running_partition();
     // esp_ota_img_states_t ota_state;
@@ -93,8 +109,4 @@ void app_main()
     //         }
     //     }
     // }
-
-    if (err != ESP_OK){
-        ESP_LOGE(TAG, "Error during startup!");
-    }
 }
