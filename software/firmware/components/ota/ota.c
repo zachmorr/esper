@@ -64,7 +64,7 @@ static void check_for_update_task(void *pvParameter)
         ESP_LOGI(TAG, "Checking %s for update...", updatesrv);
 
         esp_http_client_handle_t client = esp_http_client_init(&config);
-        if (client == NULL) {
+        if ( !client ) {
             ESP_LOGE(TAG, "Failed to initialise HTTP connection");
             continue;
         }
@@ -95,19 +95,15 @@ static void check_for_update_task(void *pvParameter)
                 }
                 else
                 {
-                    char* ptr;
-                    double new_version = strtod(new_app_info.version, &ptr);
-                    ESP_LOGI(TAG, "New firmware version: %lf", new_version);
+                    ESP_LOGI(TAG, "New firmware version: %.8s", new_app_info.version);
 
                     esp_app_desc_t running_app_info;
-                    double running_version = 0.0;
                     const esp_partition_t *running = esp_ota_get_running_partition();
                     if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
-                        running_version = strtod(running_app_info.version, &ptr);
-                        ESP_LOGI(TAG, "Running firmware version: %lf", running_version);
+                        ESP_LOGI(TAG, "Running firmware version: %.8s", running_app_info.version);
                     }
 
-                    if (new_version > running_version)
+                    if ( strncmp(running_app_info.version, new_app_info.version, 8) < 0 )
                     {
                         ESP_LOGI(TAG, "Update Available!");
                         update_available = true;
