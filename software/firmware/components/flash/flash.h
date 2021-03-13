@@ -32,6 +32,8 @@ esp_err_t get_gpio_config(bool* enabled, int* button, int* red, int* green, int*
 esp_err_t get_log_data(uint16_t* head, bool* full);
 esp_err_t update_log_data(uint16_t head, bool full);
 
+esp_err_t reset_device();
+
 esp_err_t initialize_flash();
 
 #endif

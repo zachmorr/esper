@@ -61,6 +61,7 @@ static void button_task(void* args)
             if( length > 5000 )
             {
                 ESP_LOGW(TAG, "Resetting device");
+                reset_device();
                 esp_restart();
             }
             // else if (length > 200 )
@@ -74,12 +75,11 @@ static void button_task(void* args)
             // }
             else
             {
-                // toggle_bit(BLOCKING_BIT);
+                toggle_bit(BLOCKING_BIT);
             }
         }
     }
 }
-
 
 static esp_err_t set_rgb(uint8_t red, uint8_t green, uint8_t blue)
 {
@@ -130,6 +130,9 @@ static void led_task(void* args)
         else if( check_bit(BLOCKING_BIT) )
         {
             set_rgb(BLUE);
+        }
+        else {
+            set_rgb(WEAK_BLUE);
         }
     }
 }

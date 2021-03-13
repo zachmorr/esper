@@ -252,6 +252,13 @@ static esp_err_t first_power_on()
     return ESP_OK;
 }
 
+esp_err_t reset_device()
+{
+    ESP_LOGI(TAG, "Resetting Device");
+    ERROR_CHECK(nvs_set_u8(nvs, "initialized", (uint8_t)false))
+    return ESP_OK;
+}
+
 static esp_err_t init_nvs()
 {
     ESP_LOGI(TAG, "Initializing NVS...");
@@ -314,7 +321,7 @@ esp_err_t initialize_flash()
 
 
     bool initialized = false;
-    if( nvs_get_u8(nvs, "initialized", (uint8_t*)&initialized) == ESP_ERR_NVS_NOT_FOUND )
+    if( nvs_get_u8(nvs, "initialized", (uint8_t*)&initialized) == ESP_ERR_NVS_NOT_FOUND || initialized == false)
     {
         ERROR_CHECK(first_power_on())
     }
