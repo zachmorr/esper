@@ -19,6 +19,7 @@ const int BLOCKING_BIT = BIT6;
 const int INITIALIZING_BIT = BIT7;
 const int ERROR_BIT = BIT8;
 const int OTA_BIT = BIT9;
+const int UPDATE_AVAILABLE_BIT = BIT10;
 
 esp_err_t init_event_group()
 {

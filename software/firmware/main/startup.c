@@ -13,10 +13,11 @@
 #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 #include "esp_log.h"
-// #include "esp_ota_ops.h"
+#include "esp_ota_ops.h"
 
 static const char *TAG = "APP_BOOT";
 
+#define CHECK(x) if( x != ESP_OK ) rollback();
 
 esp_err_t set_logging_levels()
 {
@@ -64,49 +65,59 @@ esp_err_t start_application()
 {
     ESP_LOGI(TAG, "Starting application...");
     ERROR_CHECK(start_interfaces())
-    ERROR_CHECK(start_application_webserver())
-
     ERROR_CHECK(wait_for(CONNECTED_BIT, portMAX_DELAY))
+
     ERROR_CHECK(initialize_sntp())
     ERROR_CHECK(start_dns())
-    start_update_checking_task();
+    ERROR_CHECK(start_update_checking_task())
+    ERROR_CHECK(start_application_webserver())
+
     return ESP_OK;
+}
+
+void cancel_rollback()
+{
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state;
+    if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
+        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+            ESP_LOGI(TAG, "Diagnostics completed successfully! Continuing execution ...");
+            esp_ota_mark_app_valid_cancel_rollback();
+        }
+    }
+}
+
+void rollback()
+{
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state;
+    if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
+        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+            ESP_LOGE(TAG, "Diagnostics failed! Start rollback to the previous version ...");
+            esp_ota_mark_app_invalid_rollback_and_reboot();
+        }
+    }
 }
 
 void app_main()
 {
-    set_logging_levels();
-    initialize_flash();
-    initialize_gpio();
-    init_event_group();
-
-    if( initialize() != ESP_OK )
-    {
-        ESP_LOGI(TAG, "Error during initialization, restarting...");
-        vTaskDelay(3000/portTICK_PERIOD_MS);
-        set_bit(ERROR_BIT);
-        esp_restart();
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state;
+    if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
+        ESP_LOGI(TAG, "Current partition state (%d)", ota_state);
     }
 
+    set_logging_levels();
+    CHECK(initialize_flash())
+    CHECK(initialize_gpio())
+    CHECK(init_event_group())
+    CHECK(initialize())
 
     if( !check_bit(PROVISIONED_BIT) )
     {
-        start_provisioning();
+        CHECK(start_provisioning())
     }
 
-    start_application();
-
-    // const esp_partition_t *running = esp_ota_get_running_partition();
-    // esp_ota_img_states_t ota_state;
-    // if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
-    //     if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
-    //         if (err == ESP_OK) {
-    //             ESP_LOGI(TAG, "Diagnostics completed successfully! Continuing execution ...");
-    //             esp_ota_mark_app_valid_cancel_rollback();
-    //         } else {
-    //             ESP_LOGE(TAG, "Diagnostics failed! Start rollback to the previous version ...");
-    //             esp_ota_mark_app_invalid_rollback_and_reboot();
-    //         }
-    //     }
-    // }
+    CHECK(start_application())
+    cancel_rollback();
 }

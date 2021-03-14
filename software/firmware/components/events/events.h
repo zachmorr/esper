@@ -14,6 +14,7 @@ extern const int BLOCKING_BIT;
 extern const int INITIALIZING_BIT;
 extern const int ERROR_BIT;
 extern const int OTA_BIT;
+extern const int UPDATE_AVAILABLE_BIT;
 
 esp_err_t init_event_group();
 esp_err_t set_bit(int bit);

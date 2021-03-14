@@ -8,11 +8,33 @@
 #include "cJSON.h"
 #include "esp_ota_ops.h"
 #include "esp_netif.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/timers.h"
 
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
 static const char *TAG = "HTTP";
+
+
+static esp_err_t restart_post_handler(httpd_req_t *req)
+{
+    xTimerHandle restartTimer = xTimerCreate("restart", pdMS_TO_TICKS(1000), pdTRUE, (void*)0, (void *)esp_restart);
+    xTimerStart(restartTimer, 0);
+
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_sendstr(req, "");
+
+    return ESP_OK;
+}
+
+static httpd_uri_t restart_post = {
+        .uri       = "/restart",
+        .method    = HTTP_POST,
+        .handler   = restart_post_handler,
+        .user_ctx  = ""
+};
 
 static esp_err_t settings_get_handler(httpd_req_t *req)
 {
@@ -54,7 +76,6 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     esp_netif_ip_info_t info;
     get_network_info(&info);
     char* ip = inet_ntoa(info.ip);
-    // nvs_get("ip", (void*)ip, 0);
     cJSON_AddStringToObject(json, "ip", ip);
 
     char url[MAX_URL_LENGTH];
@@ -72,8 +93,13 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     const esp_app_desc_t* firmware = esp_ota_get_app_description();
     cJSON_AddStringToObject(json, "version", firmware->version);
 
-    bool update_available = is_update_available();
-    cJSON_AddBoolToObject(json, "update", update_available);
+    cJSON_AddBoolToObject(json, "update", check_bit(UPDATE_AVAILABLE_BIT));
+
+    char* update_status = get_update_check_status_string(); 
+    if( strlen(update_status) )
+    {
+        cJSON_AddStringToObject(json, "update_status", update_status);
+    }
 
     httpd_resp_set_type(req, "application/json;");
     httpd_resp_set_status(req, "200 OK");
@@ -240,22 +266,43 @@ static httpd_uri_t update_firmware = {
 
 static esp_err_t ota_status_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for ota status");
+    eTaskState ota_state = get_ota_task_status();
 
-    TaskHandle_t ota_task_handle = get_ota_task_handle();
-
-    if (ota_task_handle != NULL)
+    cJSON *json = cJSON_CreateObject();
+    if ( json == NULL )
     {
-        eTaskState ota_state = eTaskGetState(ota_task_handle);
+        cJSON_Delete(json);
+        ESP_LOGW(TAG, "Error creating json object");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error creating JSON object");
+        return ESP_OK;
+    }
 
-        ESP_LOGI(TAG, "Request for firmware update status (%d)", ota_state);
-        httpd_resp_set_type(req, "text/plain; charset=UTF-8");
-        httpd_resp_sendstr(req, "running...");
+    ESP_LOGI(TAG, "OTA status (%d)", ota_state);
+    if( ota_state == eRunning || ota_state == eBlocked)
+    {
+        // httpd_resp_set_type(req, "text/plain; charset=UTF-8");
+        // httpd_resp_sendstr(req, "running...");
+
+        cJSON_AddBoolToObject(json, "running", true);
     }
     else
     {
-        httpd_resp_sendstr(req, "done");
+        // httpd_resp_set_type(req, "text/plain; charset=UTF-8");
+        // httpd_resp_sendstr(req, "done");
+
+        cJSON_AddBoolToObject(json, "running", false);
+
+        char* update_status = get_ota_status_string(); 
+        if( strlen(update_status) )
+        {
+            cJSON_AddStringToObject(json, "update_status", update_status);
+        }
     }
+
+    httpd_resp_set_type(req, "application/json;");
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_sendstr(req, cJSON_Print(json));
+    cJSON_Delete(json);
 
     return ESP_OK;
 }
@@ -269,6 +316,7 @@ static httpd_uri_t ota_status = {
 
 esp_err_t setup_settings_handlers(httpd_handle_t server)
 {
+    ERROR_CHECK(httpd_register_uri_handler(server, &restart_post))
     ERROR_CHECK(httpd_register_uri_handler(server, &settings_get))
     ERROR_CHECK(httpd_register_uri_handler(server, &settings_json_get))
     ERROR_CHECK(httpd_register_uri_handler(server, &settings_json_post))
@@ -281,6 +329,7 @@ esp_err_t setup_settings_handlers(httpd_handle_t server)
 
 esp_err_t teardown_settings_handlers(httpd_handle_t server)
 {
+    ERROR_CHECK(httpd_unregister_uri_handler(server, restart_post.uri, restart_post.method))
     ERROR_CHECK(httpd_unregister_uri_handler(server, settings_get.uri, settings_get.method))
     ERROR_CHECK(httpd_unregister_uri_handler(server, settings_json_get.uri, settings_json_get.method))
     ERROR_CHECK(httpd_unregister_uri_handler(server, settings_json_post.uri, settings_json_post.method))
