@@ -231,6 +231,7 @@ err.style.visibility = 'hidden'
 http.onreadystatechange = function(){
 if (http.readyState == 4){
 if (http.status == 200){
+urlinput.value = "";
 loadBlacklist();
 }
 else{

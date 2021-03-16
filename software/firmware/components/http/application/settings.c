@@ -20,7 +20,7 @@ static const char *TAG = "HTTP";
 
 static esp_err_t restart_post_handler(httpd_req_t *req)
 {
-    xTimerHandle restartTimer = xTimerCreate("restart", pdMS_TO_TICKS(1000), pdTRUE, (void*)0, (void *)esp_restart);
+    xTimerHandle restartTimer = xTimerCreate("restart", pdMS_TO_TICKS(500), pdTRUE, (void*)0, (void *)esp_restart);
     xTimerStart(restartTimer, 0);
 
     httpd_resp_set_status(req, "200 OK");
@@ -252,7 +252,7 @@ static esp_err_t updatefirmware_handler(httpd_req_t *req)
     start_ota();
 
     httpd_resp_set_status(req, "200 OK");
-    httpd_resp_sendstr(req, "Done");
+    httpd_resp_sendstr(req, "");
 
     return ESP_OK;
 }
@@ -266,8 +266,6 @@ static httpd_uri_t update_firmware = {
 
 static esp_err_t ota_status_get_handler(httpd_req_t *req)
 {
-    eTaskState ota_state = get_ota_task_status();
-
     cJSON *json = cJSON_CreateObject();
     if ( json == NULL )
     {
@@ -277,19 +275,14 @@ static esp_err_t ota_status_get_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
+    eTaskState ota_state = get_ota_task_status();
     ESP_LOGI(TAG, "OTA status (%d)", ota_state);
-    if( ota_state == eRunning || ota_state == eBlocked)
+    if( ota_state == eRunning || ota_state == eBlocked || ota_state == eReady)
     {
-        // httpd_resp_set_type(req, "text/plain; charset=UTF-8");
-        // httpd_resp_sendstr(req, "running...");
-
         cJSON_AddBoolToObject(json, "running", true);
     }
-    else
+    else if(  ota_state == eSuspended )
     {
-        // httpd_resp_set_type(req, "text/plain; charset=UTF-8");
-        // httpd_resp_sendstr(req, "done");
-
         cJSON_AddBoolToObject(json, "running", false);
 
         char* update_status = get_ota_status_string(); 

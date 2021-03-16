@@ -84,7 +84,7 @@
             </div>
             <div>
                 <button id="blockStatus" onclick=toggleBlockingStatus()>Blocking On</button>
-                <div class="settings">
+                <div class="settings" id="settings">
                     <div class='error' id='error'>
                         Error
                     </div>
@@ -118,6 +118,9 @@
                     </div>
                 </div>
                 <br>
+                <div class="settings" id="update_err" style="display: none; color: red;">
+                    Error
+                </div>
                 <div id="update_available">
                     <p>Update Available!</p>
                     <button class="txtbtn" id="updateButton" onclick='updateFirmware()'>Update Firmware</button>
@@ -127,7 +130,14 @@
                         <p>Updating firmware, this may take a few minutes...</p>
                         <div class="loader"></div>
                         <br><br>
-                        <!-- <button class="txtbtn altbtn" onclick='cancelUpdate()'>Cancel</button> -->
+                        <button class="txtbtn altbtn" onclick='cancelUpdate()'>Cancel</button>
+                    </div>
+                </div>
+                <div class='modal' id='restartModal'>
+                    <div class="modal-content">
+                        <p>Restarting...</p>
+                        <div class="loader"></div>
+                        <br><br>
                     </div>
                 </div>
             </div>
@@ -145,7 +155,9 @@
     var ip = document.getElementsByName("ip")[0];
     var updateButton = document.getElementById("updateButton");
     var updateModal = document.getElementById("updateModal");
+    var restartModal = document.getElementById("restartModal");
     var update_available = document.getElementById("update_available");
+    var errmsg = document.getElementById("update_err")
 
     getSettings();
     function getSettings() {
@@ -171,7 +183,7 @@
                         }
                     }
 
-                    if(settings.blocking == false)
+                    if(settings.blocking == true)
                     {
                         button.innerHTML = 'Blocking On';
                         button.className = "";
@@ -180,6 +192,16 @@
                     {
                         button.className = "altbtn";
                         button.innerHTML = 'Blocking Off';
+                    }
+                    
+                    if( settings.update_status )
+                    {
+                        errmsg.innerText = settings.update_status;
+                        errmsg.style.display = "block"
+                    }
+                    else
+                    {
+                        errmsg.style.display = "none"
                     }
 
                     if(settings.update == true)
@@ -190,6 +212,7 @@
                     {
                         update_available.style.visibility = 'hidden';
                     }
+
                 }
                 else{
                     err.innerHTML = http.responseText;
@@ -237,12 +260,12 @@
             if (http.readyState == 4){
                 if (http.status == 200){
                     let json = JSON.parse(http.response);
-                    if(json.blocking == false)
+                    if(json.blocking == true)
                     {
                         button.innerHTML = 'Blocking On';
                         button.className = "";
                     }
-                    else if (json.blocking == true)
+                    else if (json.blocking == false)
                     {
                         button.className = "altbtn";
                         button.innerHTML = 'Blocking Off';
@@ -257,6 +280,7 @@
         }
     }
 
+    var interval_handle;
     function updateFirmware(){
         let http = new XMLHttpRequest();
         http.open("POST", 'updatefirmware');
@@ -264,15 +288,18 @@
 
         http.onreadystatechange = function() {
             if (http.readyState == 4 && http.status == 200){
-                let modal = document.getElementById('modal')
                 updateModal.style.display = 'block';
-                interval_handle = setInterval(checkUpgradeStatus, 5000);
+                interval_handle = setInterval(checkUpgradeStatus, 2000);
             }
         }
     }
 
+    function cancelUpdate(){
+        updateModal.style.display = 'none';
+        clearInterval(interval_handle);
+    }
+
     function checkUpgradeStatus(){
-        console.log("Checking status...")
         let http = new XMLHttpRequest();
         let url = 'updatestatus';
         http.open("GET", url);
@@ -280,11 +307,41 @@
 
         http.onreadystatechange = function() {
             if (http.readyState == 4 && http.status == 200){
-                let response = http.responseText;
-                console.log(response)
-                if (response == 'done'){
-                    window.location.href = '/settings'
+                let status = JSON.parse(http.response);
+                if( status.running == false )
+                {
+                    updateModal.style.display = 'none';
+                    clearInterval(interval_handle);
+
+                    if( status.update_status )
+                    {
+                        errmsg.innerText = status.update_status;
+                        errmsg.style.display = "block"
+                    }
+                    else
+                    {
+                        restartModal.style.display = 'block';
+
+                        let req = new XMLHttpRequest();
+                        req.open("POST", 'restart');
+                        req.send();
+
+                        setTimeout(redirect, 1500);
+                    }
                 }
+            }
+        }
+    }
+
+    function redirect(){
+        let http = new XMLHttpRequest();
+        let url = 'settings';
+        http.open("GET", url);
+        http.send();
+
+        http.onreadystatechange = function() {
+            if (http.readyState == 4 && http.status == 200){
+                window.location.href = '/settings';
             }
         }
     }

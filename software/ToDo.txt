@@ -1,13 +1,9 @@
 
 
 Version 1.0:
-Error checking at startup, rollback if neccesary
 Handle OTA errors
 add button to rollback to previous update
-clear blacklist textbox after submissions
 notification that ip will change after restart
-fix blocking status
-fix time column width
 full tests of all features
 
 TODO:
