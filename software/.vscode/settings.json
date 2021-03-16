@@ -38,7 +38,14 @@
     "utility": "c",
     "json.h": "c",
     "esp_ota_ops.h": "c",
-    "esp_http_server.h": "c"
+    "esp_http_server.h": "c",
+    "esp_wifi.h": "c",
+    "esp_wifi_types.h": "c",
+    "esp_event.h": "c",
+    "configuration.h": "c",
+    "esp_spiffs.h": "c",
+    "semphr.h": "c",
+    "task.h": "c"
   },
   "cmake.configureOnOpen": false
 }

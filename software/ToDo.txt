@@ -2,13 +2,13 @@
 
 Version 1.0:
 Error checking at startup, rollback if neccesary
+Handle OTA errors
 add button to rollback to previous update
-Add menuconfig/flash items to configure
-    gpio
-    ethernet
-    wifi settings
-    ota on/off
-    upstream dns
+clear blacklist textbox after submissions
+notification that ip will change after restart
+fix blocking status
+fix time column width
+full tests of all features
 
 TODO:
 Settings
@@ -32,11 +32,11 @@ DATETIME
 CONFIGURATION
     Look into wifi_provisioning library
 DNS
+    Support for non A/AAAA types
     better client handling
         print error if client never got response
     Reverse DNS support
     Benchmark DNS response times
-    Benchmark copy by value vs copy by reference
 LEDs
     LED Error Codes
 WEBSITE
