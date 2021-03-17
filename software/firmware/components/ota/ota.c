@@ -32,7 +32,7 @@ static TaskHandle_t ota_task_handle = NULL;
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
 
-esp_err_t rollback()
+esp_err_t rollback_ota()
 {
     esp_ota_mark_app_invalid_rollback_and_reboot();
     return ESP_OK;

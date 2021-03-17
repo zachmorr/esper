@@ -1,2 +1,0 @@
-scp build\OpenEsper.* build\bootloader\bootloader.bin build\partition_table\partition-table.bin build\ota_data_initial.bin zach@192.168.2.254:~/esp/binary/
-ssh -t zach@192.168.2.254 "tmux att -t esp \; send-keys './flash.sh' Enter"

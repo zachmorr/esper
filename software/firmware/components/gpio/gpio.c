@@ -68,7 +68,7 @@ static void button_task(void* args)
             else if( length > 10000 )
             {
                 ESP_LOGW(TAG, "Rolling back");
-                rollback();
+                rollback_ota();
                 esp_restart();
             }
             // else if (length > 200 )

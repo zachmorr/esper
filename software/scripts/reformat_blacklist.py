@@ -1,6 +1,6 @@
 import os
 
-outputFile = r'components/url/default_blacklist.txt'
+outputFile = r'firmware/components/url/default_blacklist.txt'
 inputFile = r'DefaultBlacklist/blacklist.txt'
 
 with open(inputFile, 'rb') as input:
