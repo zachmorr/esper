@@ -5,6 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+esp_err_t rollback();
 esp_err_t start_ota();
 eTaskState get_ota_task_status();
 char* get_ota_status_string();

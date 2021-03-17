@@ -4,6 +4,7 @@
 #include "flash.h"
 #include "dns.h"
 #include "error.h"
+#include "ota.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -62,6 +63,12 @@ static void button_task(void* args)
             {
                 ESP_LOGW(TAG, "Resetting device");
                 reset_device();
+                esp_restart();
+            }
+            else if( length > 10000 )
+            {
+                ESP_LOGW(TAG, "Rolling back");
+                rollback();
                 esp_restart();
             }
             // else if (length > 200 )

@@ -207,9 +207,7 @@
                     </div>
                 </div>
                 <br>
-                <div class="settings" id="update_err" style="display: none; color: red;">
-                    Error
-                </div>
+
                 <div id="update_available">
                     <p>Update Available!</p>
                     <button class="txtbtn" id="updateButton" onclick='updateFirmware()'>Update Firmware</button>
@@ -248,7 +246,6 @@
     var updateModal = document.getElementById("updateModal");
     var restartModal = document.getElementById("restartModal");
     var update_available = document.getElementById("update_available");
-    var errmsg = document.getElementById("update_err")
 
     getSettings();
     function getSettings() {
@@ -287,12 +284,12 @@
                     
                     if( settings.update_status )
                     {
-                        errmsg.innerText = settings.update_status;
-                        errmsg.style.display = "block"
+                        err.innerHTML = settings.update_status;
+                        err.style.visibility = 'visible'
                     }
                     else
                     {
-                        errmsg.style.display = "none"
+                        err.style.visibility = 'hidden'
                     }
 
                     if(settings.update == true)
@@ -406,8 +403,9 @@
 
                     if( status.update_status )
                     {
-                        errmsg.innerText = status.update_status;
-                        errmsg.style.display = "block"
+                        console.log(status.update_status)
+                        err.innerHTML = status.update_status;
+                        err.style.visibility = 'visible'
                     }
                     else
                     {

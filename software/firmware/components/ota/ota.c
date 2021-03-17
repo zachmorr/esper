@@ -31,6 +31,13 @@ static char ota_status_string[100] = "";
 static TaskHandle_t ota_task_handle = NULL;
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
+
+esp_err_t rollback()
+{
+    esp_ota_mark_app_invalid_rollback_and_reboot();
+    return ESP_OK;
+}
+
 char* get_update_check_status_string()
 {
     return update_check_status_string;
@@ -96,6 +103,10 @@ static void check_for_update_task(void *pvParameter)
                     {
                         ESP_LOGI(TAG, "Update Available!");
                         set_bit(UPDATE_AVAILABLE_BIT);
+                    }
+                    else
+                    {
+                        clear_bit(UPDATE_AVAILABLE_BIT);
                     }
 
                     strcpy(update_check_status_string, "");
@@ -180,7 +191,8 @@ static void ota_task(void *pvParameter)
         int binary_file_length = 0;
         /*deal with all receive packet*/
         bool image_header_was_checked = false;
-        while (1) {
+        bool keep_going = true;
+        while ( keep_going ) {
             vTaskDelay(1); // added to make FreeRTOS task watchdog happy
             int data_read = esp_http_client_read(client, ota_write_data, BUFFSIZE);
             if (data_read < 0) 
@@ -222,14 +234,16 @@ static void ota_task(void *pvParameter)
                                 ESP_LOGW(TAG, "The firmware has been rolled back to the previous version.");
                                 strcpy(ota_status_string, "New version is the same as previous invalid version.");
                                 http_cleanup(client);
+                                keep_going = false;
                                 continue;
                             }
                         }
 
                         if (memcmp(new_app_info.version, running_app_info.version, sizeof(new_app_info.version)) == 0) {
                             ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
-                            strcpy(ota_status_string, "Current running version is the same as a new. We will not continue the update.");
+                            strcpy(ota_status_string, "Current running version is the same as a new. Update will not continue.");
                             http_cleanup(client);
+                            keep_going = false;
                             continue;
                         }
 
@@ -241,6 +255,7 @@ static void ota_task(void *pvParameter)
                             ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
                             strcpy(ota_status_string, "esp_ota_begin failed");
                             http_cleanup(client);
+                            keep_going = false;
                             continue;
                         }
                         ESP_LOGI(TAG, "esp_ota_begin succeeded");
@@ -250,6 +265,7 @@ static void ota_task(void *pvParameter)
                         ESP_LOGE(TAG, "received package is not fit len");
                         strcpy(ota_status_string, "received package is not fit len");
                         http_cleanup(client);
+                        keep_going = false;
                         continue;
                     }
                 }
@@ -257,6 +273,7 @@ static void ota_task(void *pvParameter)
                 if (err != ESP_OK) {
                     strcpy(ota_status_string, "esp_ota_write failed!");
                     http_cleanup(client);
+                    keep_going = false;
                     continue;
                 }
                 binary_file_length += data_read;
@@ -278,34 +295,39 @@ static void ota_task(void *pvParameter)
                 }
             }
         }
+        
         ESP_LOGI(TAG, "Total Write binary data length: %d", binary_file_length);
-        if (esp_http_client_is_complete_data_received(client) != true) {
-            ESP_LOGE(TAG, "Error in receiving complete file");
-            strcpy(ota_status_string, "Error in receiving complete file");
-            http_cleanup(client);
-            continue;
-        }
-
-        err = esp_ota_end(update_handle);
-        if (err != ESP_OK) {
-            if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
-                ESP_LOGE(TAG, "Image validation failed, image is corrupted");
+        
+        if( keep_going )
+        {
+            if (esp_http_client_is_complete_data_received(client) != true) {
+                ESP_LOGE(TAG, "Error in receiving complete file");
+                strcpy(ota_status_string, "Error in receiving complete file");
+                http_cleanup(client);
+                continue;
             }
-            ESP_LOGE(TAG, "esp_ota_end failed (%s)!", esp_err_to_name(err));
-            strcpy(ota_status_string, "esp_ota_end failed");
-            http_cleanup(client);
-            continue;
-        }
 
-        err = esp_ota_set_boot_partition(update_partition);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
-            strcpy(ota_status_string, "esp_ota_set_boot_partition failed");
-            http_cleanup(client);
-            continue;
+            err = esp_ota_end(update_handle);
+            if (err != ESP_OK) {
+                if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
+                    ESP_LOGE(TAG, "Image validation failed, image is corrupted");
+                }
+                ESP_LOGE(TAG, "esp_ota_end failed (%s)!", esp_err_to_name(err));
+                strcpy(ota_status_string, "esp_ota_end failed");
+                http_cleanup(client);
+                continue;
+            }
+
+            err = esp_ota_set_boot_partition(update_partition);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
+                strcpy(ota_status_string, "esp_ota_set_boot_partition failed");
+                http_cleanup(client);
+                continue;
+            }
+            ESP_LOGI(TAG, "Prepare to restart system!");
+            strcpy(ota_status_string, "");
         }
-        ESP_LOGI(TAG, "Prepare to restart system!");
-        strcpy(ota_status_string, "");
     }
 }
 
