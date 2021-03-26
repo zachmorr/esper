@@ -7,6 +7,7 @@
 #include "datetime.h"
 #include "gpio.h"
 
+#include "errno.h"
 #include "stdio.h"
 #include "string.h"
 #include "freertos/FreeRTOS.h"
@@ -16,7 +17,7 @@
 #include "lwip/ip_addr.h"
 #include "esp_netif.h"
 
-#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#define LOG_LOCAL_LEVEL ESP_LOG_WARN
 #include "esp_log.h"
 static const char *TAG = "DNS";
 
@@ -94,7 +95,8 @@ static IRAM_ATTR void listening_t(void* paramerters)
 
         if( xQueueSend(packet_queue, &packet, 0) == errQUEUE_FULL )
         {
-            ESP_LOGW(TAG, "Queue Full, could not add packet");
+            ESP_LOGE(TAG, "Queue Full, could not add packet");
+            free(packet);
         }
     }
 }
@@ -105,19 +107,30 @@ static IRAM_ATTR esp_err_t forward_query(Packet* packet)
     int sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&upstream_dns, addrlen);
     xSemaphoreGive(upstream_dns_mutex);
 
-    if(sendlen <= 0)
+    // Wait ~25ms to resend if out of memory
+    while( errno == ENOMEM && sendlen < 1)
     {
-        ESP_LOGW(TAG, "Failed to foward request");
+        vTaskDelay( 25 / portTICK_PERIOD_MS );
+        xSemaphoreTake(upstream_dns_mutex, portMAX_DELAY);
+        sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&upstream_dns, addrlen);
+        xSemaphoreGive(upstream_dns_mutex);
+    }
+
+    if(sendlen < 1)
+    {
+        ESP_LOGE(TAG, "Failed to foward query, errno=%s", strerror(errno));
         return ESP_FAIL;
     }
-    
-    for(int i = CLIENT_QUEUE_SIZE-1; i >= 1; i--) 
+    else
     {
-        client_queue[i] = client_queue[i-1];
+        for(int i = CLIENT_QUEUE_SIZE-1; i >= 1; i--) 
+        {
+            client_queue[i] = client_queue[i-1];
+        }
+        client_queue[0].src_address = packet->src;
+        client_queue[0].id = packet->dns.header->id;
+        client_queue[0].response_latency = packet->recv_timestamp;
     }
-    client_queue[0].src_address = packet->src;
-    client_queue[0].id = packet->dns.header->id;
-    client_queue[0].response_latency = packet->recv_timestamp;
 
     return ESP_OK;
 }
@@ -152,7 +165,10 @@ static IRAM_ATTR esp_err_t answer_query(Packet* packet, uint32_t ip)
     }
 
     if( sendto(dns_srv_sock, packet->data, packet->length+len, 0, (struct sockaddr *)&packet->src, addrlen) < 1 )
+    {
+        ESP_LOGE(TAG, "Failed to answer query");
         return ESP_FAIL;
+    }
 
     return ESP_OK;
 }
@@ -181,9 +197,18 @@ static IRAM_ATTR esp_err_t forward_answer(Packet* packet)
     {
         if(packet->dns.header->id == client_queue[i].id)
         {
-            if( sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&client_queue[i].src_address, addrlen) < 1 )
+            int sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&client_queue[i].src_address, addrlen);
+
+            // Wait ~25ms to resend if out of memory
+            while( errno == ENOMEM && sendlen < 1)
             {
-                ESP_LOGW(TAG, "Failed to forward answer");
+                vTaskDelay( 25 / portTICK_PERIOD_MS );
+                sendlen = sendto(dns_srv_sock, packet->data, packet->length, 0, (struct sockaddr *)&client_queue[i].src_address, addrlen);
+            }
+
+            if(sendlen < 1)
+            {
+                ESP_LOGE(TAG, "Failed to foward answer, errno=%s", strerror(errno));
                 return ESP_FAIL;
             }
 
@@ -224,7 +249,7 @@ static IRAM_ATTR void dns_t(void* paramerters)
         BaseType_t xErr = xQueueReceive(packet_queue, &packet, portMAX_DELAY);
         if(xErr == pdFALSE)
         {
-            ESP_LOGI(TAG, "Error receiving from queue");
+            ESP_LOGW(TAG, "Error receiving from queue");
             continue;
         }
 
@@ -285,7 +310,7 @@ static IRAM_ATTR void dns_t(void* paramerters)
             
         }
         int64_t end = esp_timer_get_time();
-        ESP_LOGI(TAG, "Processing Time: %lld ms", (end-packet->recv_timestamp)/1000);
+        ESP_LOGD(TAG, "Processing Time: %lld ms", (end-packet->recv_timestamp)/1000);
     }
 }
 
@@ -300,8 +325,8 @@ esp_err_t start_dns()
     ERROR_CHECK(load_device_url())
     ERROR_CHECK(set_bit(BLOCKING_BIT))
 
-    BaseType_t xErr = xTaskCreatePinnedToCore(listening_t, "listening_task", 8000, NULL, 9, &listening, 1);
-    xErr &= xTaskCreatePinnedToCore(dns_t, "dns_task", 16000, NULL, 9, &dns, 1);
+    BaseType_t xErr = xTaskCreatePinnedToCore(listening_t, "listening_task", 8000, NULL, 9, &listening, 0);
+    xErr &= xTaskCreatePinnedToCore(dns_t, "dns_task", 15000, NULL, 9, &dns, 0);
     if( xErr != pdPASS )
         return ESP_FAIL;
 

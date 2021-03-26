@@ -45,7 +45,8 @@
     "configuration.h": "c",
     "esp_spiffs.h": "c",
     "semphr.h": "c",
-    "task.h": "c"
+    "task.h": "c",
+    "cstring": "cpp"
   },
   "cmake.configureOnOpen": false
 }

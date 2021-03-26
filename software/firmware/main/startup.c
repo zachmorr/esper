@@ -33,6 +33,21 @@ esp_err_t set_logging_levels()
     return ESP_OK;
 }
 
+void task_stacks(void* params)
+{
+    ESP_LOGI(TAG, "Starting Task Task");
+    char buf[1000];
+    while(1)
+    {
+        vTaskDelay( 5000/portTICK_PERIOD_MS );
+        ESP_LOGI(TAG, "Min Free Heap: %d", xPortGetMinimumEverFreeHeapSize());
+        ESP_LOGI(TAG, "Running Tasks: %d", uxTaskGetNumberOfTasks());
+
+        vTaskList(buf);
+        ESP_LOGI(TAG, "\nName\t\tState\tPriority\tStack\tNum\n%s", buf);
+    }
+}
+
 esp_err_t initialize()
 {
     ESP_LOGI(TAG, "Initializing...");
@@ -120,4 +135,6 @@ void app_main()
 
     CHECK(start_application())
     cancel_rollback();
+
+    // xTaskCreatePinnedToCore(task_stacks, "task_task", 4000, NULL, 2, NULL, tskNO_AFFINITY);
 }

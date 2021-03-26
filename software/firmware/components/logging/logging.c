@@ -204,8 +204,7 @@ esp_err_t initialize_logging()
 {
     log_queue = xQueueCreate(LOG_QUEUE_SIZE, sizeof(Log_Entry));
 
-    xTaskCreatePinnedToCore(logging_task, "logging_task", 
-                            10000, NULL, 2, &logging, 0);
+    xTaskCreatePinnedToCore(logging_task, "logging_task", 9000, NULL, 2, &logging, 1);
 
     return ESP_OK;
 }

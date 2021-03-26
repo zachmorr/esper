@@ -34,8 +34,8 @@ esp_err_t initialize_sntp()
     // wait for time to be set
     int retry = 0;
     const int retry_count = 10;
-    while(timeinfo.tm_year < (2016 - 1900) && ++retry < retry_count) {
-        ESP_LOGD(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+    while(timeinfo.tm_year < (2016 - 1900)) {
+        ESP_LOGI(TAG, "Getting time from SNTP server...");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         time(&now);
         localtime_r(&now, &timeinfo);

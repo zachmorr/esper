@@ -71,15 +71,6 @@ static void button_task(void* args)
                 rollback_ota();
                 esp_restart();
             }
-            // else if (length > 200 )
-            // {
-            //     char buf[500];
-            //     //vTaskDelay(5000/ portTICK_PERIOD_MS);
-            //     ESP_LOGI("STATS", "Run Time Stats");
-            //     vTaskGetRunTimeStats(buf);
-            //     ESP_LOGI("STATS", "\n%s", buf);
-            //     ESP_LOGI("STATS", "\n\nFree Heap: %d", xPortGetFreeHeapSize());
-            // }
             else
             {
                 toggle_bit(BLOCKING_BIT);
@@ -199,7 +190,7 @@ esp_err_t initialize_gpio()
     set_rgb(0,0,0);
 
     xTaskCreatePinnedToCore(button_task, "button_task", 3000, NULL, 2, &button_task_handle, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(led_task, "led_task", 3000, NULL, 2, &led_task_handle, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(led_task, "led_task", 2000, NULL, 2, &led_task_handle, tskNO_AFFINITY);
     ESP_LOGI(TAG, "GPIO Initialized");
     return ESP_OK;
 }

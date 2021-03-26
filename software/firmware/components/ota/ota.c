@@ -344,8 +344,8 @@ esp_err_t start_ota()
 }
 
 esp_err_t start_update_checking_task(){
-    xTaskCreatePinnedToCore(&ota_task, "ota_task", 8192, NULL, 5, &ota_task_handle, 0);
-    xTaskCreatePinnedToCore(&check_for_update_task, "update_check_task", 8192, NULL, 5, &update_check_handle, 0);
+    xTaskCreatePinnedToCore(&ota_task, "ota_task", 8192, NULL, 5, &ota_task_handle, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(&check_for_update_task, "update_check_task", 8192, NULL, 5, &update_check_handle, tskNO_AFFINITY);
     check_for_update();
 
     xTimerHandle updateCheckTimer = xTimerCreate("Check for update", pdMS_TO_TICKS(1000*60*60), pdTRUE, (void*)0, check_for_update);

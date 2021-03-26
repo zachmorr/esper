@@ -4,7 +4,7 @@
 #include <esp_system.h>
 #include "cJSON.h"
 
-#define MAX_BLACKLIST_SIZE 50000
+#define MAX_BLACKLIST_SIZE 2600
 #define MAX_WHITELIST_SIZE 20000
 #define MAX_URL_LENGTH 255
 
