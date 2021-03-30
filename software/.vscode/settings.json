@@ -46,7 +46,25 @@
     "esp_spiffs.h": "c",
     "semphr.h": "c",
     "task.h": "c",
-    "cstring": "cpp"
+    "cstring": "cpp",
+    "chrono": "cpp",
+    "ctime": "cpp",
+    "numeric": "cpp",
+    "ratio": "cpp",
+    "tuple": "cpp",
+    "type_traits": "cpp"
   },
-  "cmake.configureOnOpen": false
+  "cmake.configureOnOpen": false,
+  "cSpell.words": [
+    "IRAM",
+    "LOGD",
+    "LOGI",
+    "LOGV",
+    "LOGW",
+    "ledc",
+    "mdio",
+    "qclass",
+    "rddata",
+    "rmii"
+  ]
 }

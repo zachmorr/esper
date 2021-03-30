@@ -9,6 +9,7 @@
 - How to use guide
 - Hardware w/ on board programmer
 - Basic site at openesper.com
+- Spell check
 - Push to official repo
 
 ### Tests:

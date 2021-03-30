@@ -22,35 +22,32 @@ char* get_time_str(time_t time)
 esp_err_t initialize_sntp()
 {
     ESP_LOGI(TAG, "Initializing SNTP");
+
+    /* SNTP operating modes: default is to poll using unicast.
+    The mode has to be set before calling sntp_init(). */
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
+
+    // Configure SNTP serveer and initialize
     sntp_setservername(0, "pool.ntp.org");
     sntp_init();
 
+    // Poll SNTP server until current time is retrieved, 
     time_t now = 0;
     struct tm timeinfo = { 0 };
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
-    // wait for time to be set
-    int retry = 0;
-    const int retry_count = 10;
-    while(timeinfo.tm_year < (2016 - 1900)) {
+    do {
         ESP_LOGI(TAG, "Getting time from SNTP server...");
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-        time(&now);
-        localtime_r(&now, &timeinfo);
-    }
 
-    if(retry == retry_count)
-    {
-        ESP_LOGE(TAG, "Could Not Get Time");
-        return ESP_FAIL;
-    }
-    else
-    {
-        setenv("TZ", "PST8PDT,M3.2.0/2,M11.1.0", 1);
-        tzset();
-        ESP_LOGI(TAG, "Current Time: %s", get_time_str(now));
-        return ESP_OK;
-    }
+        time(&now); // Get current time
+        
+        localtime_r(&now, &timeinfo); // Convert current time to tm struct, makes parsing easier
+
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    } while( timeinfo.tm_year < (2016 - 1900) ); // year will be (1970 - 1900) if time is not set
+
+    // Set Timezone to PST (options for configuring TZ coming soon)
+    setenv("TZ", "PST8PDT,M3.2.0/2,M11.1.0", 1);
+    tzset();
+    ESP_LOGI(TAG, "Current Time: %s", get_time_str(now));
+
+    return ESP_OK;
 }
