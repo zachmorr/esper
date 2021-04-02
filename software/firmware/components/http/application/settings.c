@@ -90,15 +90,15 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "ip", ip);
 
     char url[MAX_URL_LENGTH];
-    ERROR_CHECK(get_device_url(url))
+    get_device_url(url);
     cJSON_AddStringToObject(json, "url", url);
 
     char dnssrv[IP4ADDR_STRLEN_MAX];
-    ERROR_CHECK(get_upstream_dns(dnssrv))
+    get_upstream_dns(dnssrv);
     cJSON_AddStringToObject(json, "dnssrv", dnssrv);
 
     char updatesrv[MAX_URL_LENGTH];
-    ERROR_CHECK(get_update_url(updatesrv))
+    get_update_url(updatesrv);
     cJSON_AddStringToObject(json, "updatesrv", updatesrv);
     
     const esp_app_desc_t* firmware = esp_ota_get_app_description();
@@ -183,7 +183,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "url: %s", url->valuestring);
 
     // Save URL to flash, load updated URL into RAM
-    ERROR_CHECK(set_device_url(url->valuestring))
+    set_device_url(url->valuestring);
     load_device_url();
 
     // Get dnssrv
@@ -198,7 +198,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "dnssrv: %s", dnssrv->valuestring);
 
     // Save DNS server to flash, load updated DNS server into RAM
-    ERROR_CHECK(set_upstream_dns(dnssrv->valuestring))
+    set_upstream_dns(dnssrv->valuestring);
     load_upstream_dns();
 
     // Get updatesrv
@@ -213,7 +213,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "updatesrv: %s", updatesrv->valuestring);
 
     // Save update url to flash, check for update from new url
-    ERROR_CHECK(set_update_url(updatesrv->valuestring))
+    set_update_url(updatesrv->valuestring);
     check_for_update();
 
     httpd_resp_set_status(req, "200 OK");

@@ -12,11 +12,11 @@
 #include "esp_log.h"
 static const char *TAG = "URL";
 
-static char blacklist[MAX_BLACKLIST_SIZE];
+static char blacklist[MAX_BLACKLIST_SIZE];      // Blacklist buffer
 
-static int url_in_blacklist;
-static int blacklist_size;
-static SemaphoreHandle_t blacklist_mutex;
+static int url_in_blacklist;                    // Number of urls in blacklist
+static int blacklist_size;                      // Bytes of blacklist buffer being used
+static SemaphoreHandle_t blacklist_mutex;       // Lock for buffer
 
 
 char* get_blacklist(int* size)
@@ -31,8 +31,10 @@ void return_blacklist()
     xSemaphoreGive(blacklist_mutex);
 }
 
+// Load blacklist from Flash into RAM
 static esp_err_t reload_blacklist()
 {
+    // Open blacklist file
     FILE* f = NULL;
     f = fopen("/spiffs/blacklist", "r");
     if ( !f )
@@ -41,6 +43,7 @@ static esp_err_t reload_blacklist()
     xSemaphoreTake(blacklist_mutex, portMAX_DELAY);
     url_in_blacklist = 0;
 
+    // Read through file, saving into buffer
     URL url = {0};
     blacklist_size = 0;
     while(fread(&url.length, sizeof(url.length), 1, f) == sizeof(url.length))
@@ -57,33 +60,41 @@ static esp_err_t reload_blacklist()
 
 esp_err_t add_to_blacklist(URL url)
 {
+    // Check if list if full
     if ( MAX_BLACKLIST_SIZE-blacklist_size <= url.length+1 )
         return URL_ERR_LIST_FUll;
 
+    // Check url validity
     if ( !valid_url(url) )
         return URL_ERR_INVALID_URL;
 
+    // Make sure url isn't already in blacklist
     if ( in_blacklist(url) )
         return URL_ERR_ALREADY_EXISTS;
 
+    // Save to blacklist file
     FILE* f = fopen("/spiffs/blacklist", "a");
     if( !f )
         return URL_ERR_LIST_UNAVAILBLE;
 
     fwrite(&url, url.length+sizeof(url.length), 1, f);
     fclose(f);
+
+    // Load blacklist file into RAM
     reload_blacklist();
     return ESP_OK;
 }
 
 esp_err_t remove_from_blacklist(URL removal)
 {
+    // Open blacklist, as well as a temporary file
     FILE* f = fopen("/spiffs/blacklist", "r");
     FILE* tmp = fopen("/spiffs/tmplist", "w");
 
     if ( !f || !tmp)
         return URL_ERR_LIST_UNAVAILBLE;
 
+    // Copy every url in blacklist to tmplist, except url to be removed
     bool found_url = false;
     URL url = {0};
     while(fread(&url.length, sizeof(url.length), 1, f) == sizeof(url.length))
@@ -105,9 +116,11 @@ esp_err_t remove_from_blacklist(URL removal)
 
     fclose(tmp);
     fclose(f);
-    unlink("/spiffs/blacklist");
-    rename("/spiffs/tmplist", "/spiffs/blacklist");
-    reload_blacklist();
+    unlink("/spiffs/blacklist");                    // Delete old blacklist
+    rename("/spiffs/tmplist", "/spiffs/blacklist"); // Rename updated list to blacklist
+
+    // Load new blacklist into RAM
+    reload_blacklist(); 
     
     if(found_url)
         return ESP_OK;

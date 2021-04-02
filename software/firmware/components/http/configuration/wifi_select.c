@@ -11,6 +11,9 @@
 #include "esp_log.h"
 static const char *TAG = "HTTP";
 
+/**
+  * @brief Page that lists available SSIDs
+  */
 static esp_err_t wifi_select_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for /");
@@ -32,6 +35,9 @@ static httpd_uri_t wifi_select = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Get available IPs
+  */
 static esp_err_t wifi_json_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for wifi.json");

@@ -21,6 +21,7 @@ static TaskHandle_t logging;
 
 esp_err_t build_log_json(cJSON* json, uint32_t size, uint32_t page)
 {
+    // Get current position of log
     uint16_t log_head = 0;
     bool full_flag = false;
     ERROR_CHECK(get_log_data(&log_head, &full_flag))
@@ -97,12 +98,14 @@ esp_err_t build_log_json(cJSON* json, uint32_t size, uint32_t page)
 
 esp_err_t log_query(URL url, bool blocked, uint32_t client)
 {
+    // Create Log_Entry object using given parameters
     Log_Entry entry = {0};
     time(&entry.time);
     entry.url = url;
     entry.blocked = blocked;
     entry.client = client;
 
+    // Add to queue of logs
     BaseType_t err = xQueueSend(log_queue, &entry, 0);
     if(err == errQUEUE_FULL)
     {
@@ -122,16 +125,19 @@ static void logging_task(void* args)
     ESP_LOGI(TAG, "Logging Task Started");
     while(1)
     {
+        // Wait for notification that entry has been added to queue
         xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
         long start = esp_timer_get_time();
 
+        // Get current position of log
         uint16_t log_head = 0;
         bool full_flag = false;
         get_log_data(&log_head, &full_flag);
 
-        // get all entries waiting to be logged
+        // get number of entries in log queue
         uint8_t entries_in_queue = uxQueueMessagesWaiting(log_queue);
 
+        // Open file
         FILE* log = fopen("/spiffs/log", "r+");
         if( !log )
         {
@@ -139,8 +145,10 @@ static void logging_task(void* args)
             continue;
         }
 
+        // Iterate through queue, adding each entry
         for(int i = 0; i < entries_in_queue; i++)
         {
+            // Get log entry
             Log_Entry entry = {0};
             esp_err_t err = xQueueReceive(log_queue, &entry, portMAX_DELAY);
             if(err == pdFALSE)
@@ -149,7 +157,7 @@ static void logging_task(void* args)
             }
             else
             {
-                // Entries are retrieved from queue FIFO (oldest first) so log_head moves backwards to keep newest entries at the front
+                // Entries are retrieved from queue FIFO (oldest first) so log_head moves backwards so newest entries are at the front of log
                 if(log_head <= 0)  // Reset head position if it is at the end
                 {
                     log_head = MAX_LOGS;
@@ -159,14 +167,14 @@ static void logging_task(void* args)
                 log_head--;
                 ESP_LOGV(TAG, "Adding %*s to log address %d(%d)", entry.url.length, entry.url.string, log_head, log_head*sizeof(Log_Entry));
 
+                // Move to position on log
                 if(fseek(log, log_head*sizeof(Log_Entry), SEEK_SET))
                     ESP_LOGW(TAG, "Could not fseek to %d(%d)", log_head, log_head*sizeof(Log_Entry));
 
+                // Write to log and update log data
                 if(fwrite(&entry, sizeof(Log_Entry), 1, log))
                 {
                     update_log_data(log_head, full_flag);
-                    // nvs_set("log_head", (void*)&log_head, sizeof(log_head));
-                    // nvs_set("full_flag", (void*)&full_flag, sizeof(full_flag));
                 }
                 else
                 {
