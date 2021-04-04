@@ -14,6 +14,9 @@
 #include "esp_log.h"
 static const char *TAG = "HTTP";
 
+/**
+  * @brief Response to request for SSID and IP
+  */
 static esp_err_t connection_json_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for /connection.json");
@@ -23,12 +26,12 @@ static esp_err_t connection_json_get_handler(httpd_req_t *req)
 
     cJSON *connection = cJSON_CreateObject(); 
     
+    // Get current SSID
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
     cJSON_AddStringToObject(connection, "ssid", (char*)wifi_config.sta.ssid);
 
-    // char ip[16];
-    // nvs_get("ip", (void*)ip, 16);
+    // Get current IP
     esp_netif_ip_info_t info;
     get_network_info(&info);
     char* ip = inet_ntoa(info.ip);
@@ -45,6 +48,9 @@ static httpd_uri_t connection_json = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Page shown after successful connection
+  */
 static esp_err_t connected_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for /connected");
@@ -67,12 +73,18 @@ static httpd_uri_t connected = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Need to wrap esp_restart() to use it with timer
+  */
 static void restart( TimerHandle_t xTimer )
 {
     ESP_LOGW(TAG, "Restarting...");
     esp_restart();
 }
 
+/**
+  * @brief Provisioning complete
+  */
 static esp_err_t finish_setup_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Finishing setup");

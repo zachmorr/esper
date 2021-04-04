@@ -17,9 +17,12 @@
 #include "esp_log.h"
 static const char *TAG = "HTTP";
 
-
+/**
+  * @brief Handler restart request, restarts the device 500ms after request
+  */
 static esp_err_t restart_post_handler(httpd_req_t *req)
 {
+    // Set timer to restart in 500ms, so response can be sent out
     xTimerHandle restartTimer = xTimerCreate("restart", pdMS_TO_TICKS(500), pdTRUE, (void*)0, (void *)esp_restart);
     xTimerStart(restartTimer, 0);
 
@@ -36,9 +39,12 @@ static httpd_uri_t restart_post = {
         .user_ctx  = ""
 };
 
+/**
+  * @brief Handler for settings GET requests
+  */
 static esp_err_t settings_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for settings.html");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
@@ -58,9 +64,12 @@ static httpd_uri_t settings_get = {
         .user_ctx  = ""
 };
 
+/**
+  * @brief Handler for settings POST requests
+  */
 static esp_err_t settings_json_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for settings.json");   
+    ESP_LOGI(TAG, "Request for %s", req->uri);  
     cJSON *json = cJSON_CreateObject();
     if ( json == NULL )
     {
@@ -69,6 +78,8 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Error creating JSON object");
         return ESP_OK;
     }
+
+    // Get settings from flash and add them to json
 
     bool blocking = check_bit(BLOCKING_BIT);
     cJSON_AddBoolToObject(json, "blocking", blocking);
@@ -79,15 +90,15 @@ static esp_err_t settings_json_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "ip", ip);
 
     char url[MAX_URL_LENGTH];
-    ERROR_CHECK(get_device_url(url))
+    get_device_url(url);
     cJSON_AddStringToObject(json, "url", url);
 
     char dnssrv[IP4ADDR_STRLEN_MAX];
-    ERROR_CHECK(get_upstream_dns(dnssrv))
+    get_upstream_dns(dnssrv);
     cJSON_AddStringToObject(json, "dnssrv", dnssrv);
 
     char updatesrv[MAX_URL_LENGTH];
-    ERROR_CHECK(get_update_url(updatesrv))
+    get_update_url(updatesrv);
     cJSON_AddStringToObject(json, "updatesrv", updatesrv);
     
     const esp_app_desc_t* firmware = esp_ota_get_app_description();
@@ -116,10 +127,14 @@ static httpd_uri_t settings_json_get = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Handler for settings POST requests
+  */
 static esp_err_t settings_json_post_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "%d %s %d", req->method, req->uri, req->content_len);
+    ESP_LOGI(TAG, "Request for %s", req->uri);
 
+    // Verify content is not too long
     if ( req->content_len > (MAX_URL_LENGTH*2+CONFIG_HTTPD_MAX_URI_LEN+IP4ADDR_STRLEN_MAX*2+100) )
     {
         ESP_LOGW(TAG, "Could not add, URL too long");
@@ -139,7 +154,7 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    // Get ip
+    // Get IP
     cJSON* ip = cJSON_GetObjectItem(json, "ip");
     if ( !cJSON_IsString(ip) || ip->valuestring == NULL)
     {
@@ -149,13 +164,14 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "IP: %s", ip->valuestring);
+
+    // Save IP to flash
     esp_netif_ip_info_t info;
     get_network_info(&info);
     inet_aton(ip->valuestring, &(info.ip));
     set_network_info(info);
-    // nvs_set("ip", (void*)ip->valuestring, strlen(ip->valuestring)+1);
 
-    // Get url
+    // Get URL
     cJSON* url = cJSON_GetObjectItem(json, "url");
     if ( !cJSON_IsString(url) || url->valuestring == NULL)
     {
@@ -165,7 +181,9 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "url: %s", url->valuestring);
-    ERROR_CHECK(set_device_url(url->valuestring))
+
+    // Save URL to flash, load updated URL into RAM
+    set_device_url(url->valuestring);
     load_device_url();
 
     // Get dnssrv
@@ -178,7 +196,9 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "dnssrv: %s", dnssrv->valuestring);
-    ERROR_CHECK(set_upstream_dns(dnssrv->valuestring))
+
+    // Save DNS server to flash, load updated DNS server into RAM
+    set_upstream_dns(dnssrv->valuestring);
     load_upstream_dns();
 
     // Get updatesrv
@@ -191,7 +211,9 @@ static esp_err_t settings_json_post_handler(httpd_req_t *req)
         return ESP_OK;
     }
     ESP_LOGI(TAG, "updatesrv: %s", updatesrv->valuestring);
-    ERROR_CHECK(set_update_url(updatesrv->valuestring))
+
+    // Save update url to flash, check for update from new url
+    set_update_url(updatesrv->valuestring);
     check_for_update();
 
     httpd_resp_set_status(req, "200 OK");
@@ -208,9 +230,13 @@ static httpd_uri_t settings_json_post = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Handler for toggleblock POST requests
+  */
 static esp_err_t toggle_blocking_handler(httpd_req_t *req){
-    ESP_LOGI(TAG, "Request to toggle blocking");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
 
+    // Toggle blocking bit
     if ( toggle_bit(BLOCKING_BIT) != ESP_OK )
     {
         ESP_LOGW(TAG, "Error toggling blocking status");
@@ -218,6 +244,7 @@ static esp_err_t toggle_blocking_handler(httpd_req_t *req){
         return ESP_OK;
     }
 
+    // Create JSON response with current blocking status
     cJSON *json = cJSON_CreateObject();
     if ( json == NULL )
     {
@@ -245,9 +272,12 @@ static httpd_uri_t set_blocking_status = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Handler for OTA POST requests, starts OTA process
+  */
 static esp_err_t updatefirmware_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for firmware update");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
 
     start_ota();
 
@@ -264,8 +294,13 @@ static httpd_uri_t update_firmware = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Handler for OTA status GET requests
+  */
 static esp_err_t ota_status_get_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "Request for %s", req->uri);
+
     cJSON *json = cJSON_CreateObject();
     if ( json == NULL )
     {
@@ -307,6 +342,9 @@ static httpd_uri_t ota_status = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Setup all handlers needed for settings page
+  */
 esp_err_t setup_settings_handlers(httpd_handle_t server)
 {
     ERROR_CHECK(httpd_register_uri_handler(server, &restart_post))
@@ -320,6 +358,9 @@ esp_err_t setup_settings_handlers(httpd_handle_t server)
     return ESP_OK;
 }
 
+/**
+  * @brief Teardown all settings page handlers
+  */
 esp_err_t teardown_settings_handlers(httpd_handle_t server)
 {
     ERROR_CHECK(httpd_unregister_uri_handler(server, restart_post.uri, restart_post.method))

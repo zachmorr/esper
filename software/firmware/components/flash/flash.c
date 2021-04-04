@@ -17,43 +17,6 @@ static const char *TAG = "FLASH";
 
 static nvs_handle nvs;
 
-esp_err_t nvs_set(char* key, void* value, size_t length)
-{
-    esp_err_t ret = nvs_set_blob(nvs, key, value, length);
-    if (ret != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
-    }
-    return ret;
-}
-
-esp_err_t nvs_get_length(char* key, size_t* length)
-{
-    esp_err_t ret = nvs_get_blob(nvs, key, NULL, length);
-    if (ret != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
-        *length = 0;
-    }
-    return ret;
-}
-
-esp_err_t nvs_get(char* key, void* value, size_t length)
-{
-    if (length < 1)
-    {
-        nvs_get_length(key, &length);
-    }
-
-    esp_err_t ret = nvs_get_blob(nvs, key, value, &length);
-    if (ret != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
-        *((uint8_t*)value) = 0;
-    }
-    return ret;
-}
-
 esp_err_t get_upstream_dns(char* str)
 {
     size_t length = IP4ADDR_STRLEN_MAX;
@@ -181,6 +144,7 @@ static esp_err_t init_settings()
 static esp_err_t init_interfaces()
 {
     ESP_LOGI(TAG, "Saving Interface Configuration");
+    
 #ifdef CONFIG_ETHERNET_ENABLE
     ERROR_CHECK(nvs_set_u8(nvs, "ethernet", true))
     ERROR_CHECK(nvs_set_u32(nvs, "phy_addr", CONFIG_ETH_PHY_ADDR))

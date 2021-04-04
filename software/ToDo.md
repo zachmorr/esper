@@ -1,6 +1,21 @@
 ## TODO:
+
+### Version 0.1
+- Document Code
+- Clean up build scripts?
+- Run through tests
+- Set up Tindie
+    - Packaging?
+- How to use guide
+- Hardware w/ on board programmer
+- Basic site at openesper.com
+- Spell check
+- Push to official repo
+
 ### Tests:
 - Start writing test doc
+### Build
+- Add Arduino support
 ### Settings
 - advanced settings fold
 ### Debugging page
@@ -12,6 +27,7 @@
 - progress bar
 ### DATETIME
 - Add timezone select
+- Connect to SNTP in background, non-blocking
 ### CONFIGURATION
 - Look into wifi_provisioning library
 ### DNS
@@ -23,6 +39,7 @@
 ### LEDs
 - LED Error Codes
 ### WEBSITE
+- Password protection!
 - Analytics
     - Total queries and total blocked queries
     - most blocked/queried websites
@@ -37,10 +54,6 @@
 - figure out way to emulate flash wear out & error handling
 - Handle flash errors
 - Document what is being held in flash
-### OTHER
-- Document/Refactor Code
-- Prevent buffer overflows
-- Move away from strcpy, strcmp, etc
 
 ## Maybe Some Day:
 - DHCP support

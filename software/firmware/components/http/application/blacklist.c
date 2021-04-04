@@ -8,11 +8,15 @@
 #include "esp_log.h"
 static const char *TAG = "HTTP";
 
+/**
+  * @brief Handler blacklist.json GET requests
+  */
 static esp_err_t blacklist_json_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for blacklist.json");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
+    // Build blacklist json
     cJSON* json = cJSON_CreateObject();
     if( build_blacklist_json(json) != ESP_OK)
     {
@@ -39,7 +43,7 @@ static httpd_uri_t blacklist_json = {
 
 static esp_err_t blacklist_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for blacklist.html");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
@@ -61,9 +65,10 @@ static httpd_uri_t blacklist = {
 
 static esp_err_t blacklist_add_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request to add url to blacklist");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
+    // Make sure URL isn't too long
     if (req->content_len > MAX_URL_LENGTH + 11)
     {
         ESP_LOGW(TAG, "Could not add, URL too long");
@@ -83,7 +88,7 @@ static esp_err_t blacklist_add_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    // Get url
+    // Get url from json
     cJSON* json_url = cJSON_GetObjectItem(json, "url");
     if ( !cJSON_IsString(json_url) || json_url->valuestring == NULL)
     {
@@ -98,6 +103,7 @@ static esp_err_t blacklist_add_handler(httpd_req_t *req)
     url.length = strlen(json_url->valuestring);
     memcpy(url.string, json_url->valuestring, url.length);
 
+    // Add to blacklist, return appropriate status
     esp_err_t err = add_to_blacklist(url);
     switch (err) {
         case ESP_OK:
@@ -146,9 +152,10 @@ static httpd_uri_t blacklist_add = {
 
 static esp_err_t blacklist_delete_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request to remove url from blacklist");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
+    // Make sure URL isn't too long
     if (req->content_len > MAX_URL_LENGTH + 11)
     {
         ESP_LOGW(TAG, "Could not delete, URL too long");
@@ -183,6 +190,7 @@ static esp_err_t blacklist_delete_handler(httpd_req_t *req)
     url.length = strlen(json_url->valuestring);
     memcpy(url.string, json_url->valuestring, url.length);
 
+    // remove from blacklist, return appropriate code
     esp_err_t err = remove_from_blacklist(url);
     switch (err) {
         case ESP_OK:
