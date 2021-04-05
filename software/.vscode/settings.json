@@ -65,6 +65,7 @@
     "mdio",
     "qclass",
     "rddata",
-    "rmii"
+    "rmii",
+    "ssid"
   ]
 }

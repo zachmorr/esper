@@ -1,28 +1,35 @@
 ## TODO:
 
 ### Version 0.1
-- Document Code
 - Clean up build scripts?
 - Run through tests
 - Set up Tindie
     - Packaging?
 - How to use guide
-- Hardware w/ on board programmer
 - Basic site at openesper.com
-- Spell check
 - Push to official repo
 
 ### Tests:
 - Start writing test doc
+- Start incorporating unit testing
 ### Build
 - Add Arduino support
-### Settings
+### Web
+- Password authentication
+- Respond to POST requests with current results
+- Analytics
+    - Total queries and total blocked queries
+    - most blocked/queried websites
+- show currently connected network & ip
+- show connected clients
+- Add log page select to homepage 
+- Upload/download blacklist files
 - advanced settings fold
-### Debugging page
+### Debugging
+- Add debug page to website
+- Add errors to error log
 - remaining memory
     - total and for each task
-- Error logs
-- clear logs
 ### OTA Updates
 - progress bar
 ### DATETIME
@@ -38,15 +45,6 @@
 - Benchmark DNS response times
 ### LEDs
 - LED Error Codes
-### WEBSITE
-- Password protection!
-- Analytics
-    - Total queries and total blocked queries
-    - most blocked/queried websites
-- show currently connected network & ip
-- show connected clients
-- Add log page select to homepage 
-- Upload/download blacklist files
 ### BLACKLIST
 - more error handling errors
 - Benchmark speed improvement from keeping blacklist in RAM instead of flash
