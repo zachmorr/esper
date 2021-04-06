@@ -52,8 +52,8 @@ Do you like the Esper hardware, but want to use it for something other than ad-b
     │   ├── custom components           # Custom KiCad component files
     │   ├── enclosure                   # FreeCAD project and STL files for enclosure
     │   ├── product                     # KiCad projects for Esper
-	│   │   ├── usb-programmable        	# Includes CP2102 for easy usb programming
-	│	│   └── jtag-header             	# 10-pin header for JTAG & UART, ment to be used with programmer
+    │   │   ├── usb-programmable        	# Includes CP2102 for easy usb programming
+    │   │   └── jtag-header             	# 10-pin header for JTAG & UART, ment to be used with programmer
     │   └── programmer                  # KiCad project for programmer/debugger
     └── software                    # Software root directory
         ├── default blacklist           # List of URLs that will be blocked by default
