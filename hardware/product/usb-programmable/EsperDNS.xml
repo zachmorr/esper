@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <export version="D">
   <design>
-    <source>C:\Users\zachary.morris\Desktop\esper\hardware\product\Product-Programmable\EsperDNS.sch</source>
-    <date>4/5/2021 3:43:33 PM</date>
+    <source>C:\Users\zachary.morris\Desktop\esper\hardware\product\usb-programmable\EsperDNS.sch</source>
+    <date>4/6/2021 9:05:54 AM</date>
     <tool>Eeschema (5.1.7)-1</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -25,7 +25,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Sunlord-GZ2012D101TF_C1015.pdf</datasheet>
       <fields>
         <field name="LCSC">C1015</field>
-        <field name="LCSC Part Number">C1015</field>
       </fields>
       <libsource lib="Device" part="Ferrite_Bead" description="Ferrite bead"/>
       <sheetpath names="/" tstamps="/"/>
@@ -37,7 +36,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL10A106KP8NNNC_C19702.pdf</datasheet>
       <fields>
         <field name="LCSC">C15850</field>
-        <field name="LCSC Part Number">C15850</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -49,7 +47,6 @@
       <footprint>RF_Module:ESP32-WROOM-32</footprint>
       <datasheet>https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf</datasheet>
       <fields>
-        <field name="Extended Part">X</field>
         <field name="LCSC">C701341</field>
       </fields>
       <libsource lib="RF_Module" part="ESP32-WROOM-32D" description="RF Module, ESP32-D0WD SoC, Wi-Fi 802.11b/g/n, Bluetooth, BLE, 32-bit, 2.7-3.6V, onboard antenna, SMD"/>
@@ -62,7 +59,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -74,7 +70,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -86,7 +81,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1002TCE_C25744.pdf</datasheet>
       <fields>
         <field name="LCSC">C25744</field>
-        <field name="LCSC Part Number">C25744</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -98,7 +92,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -126,7 +119,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Changjiang-Electronics-Tech-CJ-2N7002_C8545.pdf</datasheet>
       <fields>
         <field name="LCSC">C8545</field>
-        <field name="LCSC Part Number">C8545</field>
       </fields>
       <libsource lib="Device" part="Q_NMOS_GSD" description="N-MOSFET transistor, gate/source/drain"/>
       <sheetpath names="/" tstamps="/"/>
@@ -138,7 +130,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Changjiang-Electronics-Tech-CJ-2N7002_C8545.pdf</datasheet>
       <fields>
         <field name="LCSC">C8545</field>
-        <field name="LCSC Part Number">C8545</field>
       </fields>
       <libsource lib="Device" part="Q_NMOS_GSD" description="N-MOSFET transistor, gate/source/drain"/>
       <sheetpath names="/" tstamps="/"/>
@@ -150,7 +141,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Changjiang-Electronics-Tech-CJ-2N7002_C8545.pdf</datasheet>
       <fields>
         <field name="LCSC">C8545</field>
-        <field name="LCSC Part Number">C8545</field>
       </fields>
       <libsource lib="Device" part="Q_NMOS_GSD" description="N-MOSFET transistor, gate/source/drain"/>
       <sheetpath names="/" tstamps="/"/>
@@ -162,7 +152,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0603WAF470JT5E_C23182.pdf</datasheet>
       <fields>
         <field name="LCSC">C23182</field>
-        <field name="LCSC Part Number">C23182</field>
         <field name="Rating">1/10W</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -175,7 +164,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1002TCE_C25744.pdf</datasheet>
       <fields>
         <field name="LCSC">C25744</field>
-        <field name="LCSC Part Number">C25744</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -187,7 +175,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Foshan-NationStar-Optoelectronics-RS-3535MWAR-2JYJY-J_C110402.pdf</datasheet>
       <fields>
         <field name="LCSC"> C110402</field>
-        <field name="LCSC Part Number"> C110402</field>
       </fields>
       <libsource lib="LED" part="ASMT-YTB7-0AA02" description="Triple LED RVB (Avago Technology)"/>
       <sheetpath names="/" tstamps="/"/>
@@ -199,7 +186,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0603WAF470JT5E_C23182.pdf</datasheet>
       <fields>
         <field name="LCSC">C23182</field>
-        <field name="LCSC Part Number">C23182</field>
         <field name="Rating">1/10W</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -220,7 +206,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-1206W4F825JT5E_C247183.pdf</datasheet>
       <fields>
         <field name="LCSC">C247183</field>
-        <field name="LCSC Part Number">C247183</field>
         <field name="Rating">1/4W</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -233,7 +218,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf</datasheet>
       <fields>
         <field name="LCSC">C1525</field>
-        <field name="LCSC Part Number">C1525</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -245,9 +229,7 @@
       <footprint>Package_TO_SOT_SMD:SOT-223</footprint>
       <datasheet>https://datasheet.lcsc.com/szlcsc/Diodes-Incorporated-AZ1117EH-3-3TRG1_C108494.pdf</datasheet>
       <fields>
-        <field name="Extended Part">X</field>
         <field name="LCSC">C108494</field>
-        <field name="LCSC Part Number">C108494</field>
       </fields>
       <libsource lib="Regulator_Linear" part="AZ1117-3.3" description="1A 20V Fixed LDO Linear Regulator, 3.3V, SOT-89/SOT-223/TO-220/TO-252/TO-263"/>
       <sheetpath names="/" tstamps="/"/>
@@ -259,7 +241,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05A105KA5NQNC_C52923.pdf</datasheet>
       <fields>
         <field name="LCSC">C52923</field>
-        <field name="LCSC Part Number">C52923</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -272,7 +253,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL10A106KP8NNNC_C19702.pdf</datasheet>
       <fields>
         <field name="LCSC">C15850</field>
-        <field name="LCSC Part Number">C15850</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -285,7 +265,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGD4700TCE_C270656.pdf</datasheet>
       <fields>
         <field name="LCSC"> C25117</field>
-        <field name="LCSC Part Number"> C25117</field>
         <field name="Rating">1/16W</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -298,7 +277,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Everlight-Elec-19-217-GHC-YR1S2-3T_C72043.pdf</datasheet>
       <fields>
         <field name="LCSC">C72043</field>
-        <field name="LCSC Part Number">C72043</field>
       </fields>
       <libsource lib="Device" part="LED" description="Light emitting diode"/>
       <sheetpath names="/" tstamps="/"/>
@@ -310,7 +288,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -321,9 +298,7 @@
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <datasheet>https://www.onsemi.com/pub/Collateral/2N7002E-D.PDF</datasheet>
       <fields>
-        <field name="Alternate Datasheet">https://datasheet.lcsc.com/szlcsc/Changjiang-Electronics-Tech-CJ-2N7002_C8545.pdf</field>
         <field name="LCSC">C8545</field>
-        <field name="LCSC Part Number">C8545</field>
       </fields>
       <libsource lib="Device" part="Q_NMOS_GSD" description="N-MOSFET transistor, gate/source/drain"/>
       <sheetpath names="/" tstamps="/"/>
@@ -334,9 +309,7 @@
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <datasheet>https://www.onsemi.com/pub/Collateral/2N7002E-D.PDF</datasheet>
       <fields>
-        <field name="Alternate Datasheet">https://datasheet.lcsc.com/szlcsc/Changjiang-Electronics-Tech-CJ-2N7002_C8545.pdf</field>
         <field name="LCSC">C8545</field>
-        <field name="LCSC Part Number">C8545</field>
       </fields>
       <libsource lib="Device" part="Q_NMOS_GSD" description="N-MOSFET transistor, gate/source/drain"/>
       <sheetpath names="/" tstamps="/"/>
@@ -356,7 +329,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05A105KA5NQNC_C52923.pdf</datasheet>
       <fields>
         <field name="LCSC">C52923</field>
-        <field name="LCSC Part Number">C52923</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -366,17 +338,9 @@
     <comp ref="U4">
       <value>CP2102-GMR_NRND</value>
       <footprint>EsperFootprints:VFQFN-28-1EP_5x5mm</footprint>
-      <datasheet>https://www.silabs.com/documents/public/data-sheets/CP2102-9.pdf</datasheet>
+      <datasheet>https://datasheet.lcsc.com/szlcsc/SILICON-LABS-CP2102-GMR_C6568.pdf</datasheet>
       <fields>
-        <field name="Category">Integrated Circuits (ICs)</field>
-        <field name="DK_Datasheet_Link">https://www.silabs.com/documents/public/data-sheets/CP2102-9.pdf</field>
-        <field name="DK_Detail_Page">/product-detail/en/silicon-labs/CP2102-GMR/336-1160-1-ND/3672615</field>
-        <field name="Description">IC USB-TO-UART BRIDGE 28VQFN</field>
-        <field name="Digi-Key_PN">336-1160-1-ND</field>
-        <field name="Family">Interface - Controllers</field>
-        <field name="MPN">CP2102-GMR</field>
-        <field name="Manufacturer">Silicon Labs</field>
-        <field name="Status">Not For New Designs</field>
+        <field name="LCSC"> C6568</field>
       </fields>
       <libsource lib="EsperSymbols" part="CP2102-GMR_NRND" description=""/>
       <sheetpath names="/" tstamps="/"/>
@@ -388,7 +352,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf</datasheet>
       <fields>
         <field name="LCSC">C1525</field>
-        <field name="LCSC Part Number">C1525</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -401,7 +364,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf</datasheet>
       <fields>
         <field name="LCSC">C1525</field>
-        <field name="LCSC Part Number">C1525</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -414,7 +376,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf</datasheet>
       <fields>
         <field name="LCSC">C1525</field>
-        <field name="LCSC Part Number">C1525</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -427,7 +388,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf</datasheet>
       <fields>
         <field name="LCSC">C1525</field>
-        <field name="LCSC Part Number">C1525</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -440,7 +400,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05A105KA5NQNC_C52923.pdf</datasheet>
       <fields>
         <field name="LCSC">C52923</field>
-        <field name="LCSC Part Number">C52923</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -453,7 +412,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05A105KA5NQNC_C52923.pdf</datasheet>
       <fields>
         <field name="LCSC">C52923</field>
-        <field name="LCSC Part Number">C52923</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -466,7 +424,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0603WAF2700T5E_C22966.pdf</datasheet>
       <fields>
         <field name="LCSC">C22966</field>
-        <field name="LCSC Part Number">C22966</field>
         <field name="Rating">1/10W</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -479,7 +436,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0603WAF2700T5E_C22966.pdf</datasheet>
       <fields>
         <field name="LCSC">C22966</field>
-        <field name="LCSC Part Number">C22966</field>
         <field name="Rating">1/10W</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -500,7 +456,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -512,7 +467,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -524,7 +478,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -536,7 +489,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1002TCE_C25744.pdf</datasheet>
       <fields>
         <field name="LCSC">C25744</field>
-        <field name="LCSC Part Number">C25744</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -548,7 +500,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1002TCE_C25744.pdf</datasheet>
       <fields>
         <field name="LCSC">C25744</field>
-        <field name="LCSC Part Number">C25744</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -560,7 +511,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1002TCE_C25744.pdf</datasheet>
       <fields>
         <field name="LCSC">C25744</field>
-        <field name="LCSC Part Number">C25744</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -572,7 +522,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -584,7 +533,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1002TCE_C25744.pdf</datasheet>
       <fields>
         <field name="LCSC">C25744</field>
-        <field name="LCSC Part Number">C25744</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -595,9 +543,7 @@
       <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF1212TCE_C25852.pdf</datasheet>
       <fields>
-        <field name="Extended Part">X</field>
         <field name="LCSC">C25852</field>
-        <field name="LCSC Part Number">C25852</field>
         <field name="Rating">1%</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
@@ -610,7 +556,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Samsung-Electro-Mechanics-CL05B104KO5NNNC_C1525.pdf</datasheet>
       <fields>
         <field name="LCSC">C1525</field>
-        <field name="LCSC Part Number">C1525</field>
         <field name="Rating">10V</field>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
@@ -623,7 +568,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -635,7 +579,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -647,7 +590,6 @@
       <datasheet>https://datasheet.lcsc.com/szlcsc/Uniroyal-Elec-0402WGF499JTCE_C25120.pdf</datasheet>
       <fields>
         <field name="LCSC">C25120</field>
-        <field name="LCSC Part Number">C25120</field>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <sheetpath names="/" tstamps="/"/>
@@ -658,9 +600,7 @@
       <footprint>Package_DFN_QFN:QFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm_ThermalVias</footprint>
       <datasheet>http://ww1.microchip.com/downloads/en/DeviceDoc/8720a.pdf</datasheet>
       <fields>
-        <field name="Extended Part">X</field>
         <field name="LCSC">C45223</field>
-        <field name="LCSC Part Number">C45223</field>
       </fields>
       <libsource lib="Interface_Ethernet" part="LAN8720A" description="LAN8720 Ethernet PHY with RMII interface, QFN-24"/>
       <sheetpath names="/" tstamps="/"/>
@@ -1023,7 +963,7 @@
       <uri>C:\Program Files\KiCad\share\kicad\library/Device.lib</uri>
     </library>
     <library logical="EsperSymbols">
-      <uri>C:\Users\zachary.morris\Desktop\esper\hardware\product\Product-Programmable\..\..\custom components\EsperSymbols.lib</uri>
+      <uri>C:\Users\zachary.morris\Desktop\esper\hardware\product\usb-programmable/../../custom components/EsperSymbols.lib</uri>
     </library>
     <library logical="Interface_Ethernet">
       <uri>C:\Program Files\KiCad\share\kicad\library/Interface_Ethernet.lib</uri>

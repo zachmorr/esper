@@ -6,7 +6,7 @@
 
 ### Arduino
 
-At the moment there is no support for the Arduino environment yet, but it is something that is being worked on.
+At the moment there is no support for the Arduino environment yet, but it is being worked on.
 
 ### Requirements
 

@@ -1,7 +1,6 @@
 ## TODO:
 
 ### Version 0.1
-- Clean up build scripts?
 - Run through tests
 - Set up Tindie
     - Packaging?
