@@ -2,11 +2,11 @@
 
 # About Esper
 
-Heavily inspired by the [Pi-Hole](https://github.com/pi-hole/pi-hole), this project aims to bring network wide ad-blocking to another popular device popular among makers and hobbiests, the ESP32.
+Heavily inspired by the [Pi-Hole](https://github.com/pi-hole/pi-hole), this project aims to bring network wide ad-blocking to another popular device popular among makers and hobbyists, the ESP32.
 
 ## What is DNS?
 
-Commonly refered to as the "phonebook for the internet", the DNS protocol is how devices map human readable urls like google.com or facebook.com into IP addresses that the device can use.
+Commonly referred to as the "phone book for the internet", the DNS protocol is how devices map human readable urls like google.com or facebook.com into IP addresses that the device can use.
 
 ## How does Esper block ads?
 
@@ -34,7 +34,7 @@ If you want to try you hand an making an Esper from scratch, the hardware direct
 
 ## Reprogramming Esper
 
-Do you like the Esper hardware, but want to use it for something other than ad-blocking? Great! The Esper hardware is completely reprogrammable and includes an on-board USB-UART converter, so no extra programmers are needed!
+Do you like the Esper hardware, but want to use it for something other than ad-blocking? Great! The Esper hardware is completely reprogrammable and includes an on-board USB-UART converter, no extra programmers are needed!
 
 # Esper Development
 
@@ -52,8 +52,8 @@ Do you like the Esper hardware, but want to use it for something other than ad-b
     │   ├── custom components           # Custom KiCad component files
     │   ├── enclosure                   # FreeCAD project and STL files for enclosure
     │   ├── product                     # KiCad projects for Esper
-	│   │   ├── usb-programmable        	# Includes CP2102 for easy usb programming
-	│	│   └── jtag-header             	# 10-pin header for JTAG & UART, ment to be used with programmer
+    │   │   ├── usb-programmable        	# Includes CP2102 for easy usb programming
+    │   │   └── jtag-header             	# 10-pin header for JTAG & UART, meant to be used with programmer
     │   └── programmer                  # KiCad project for programmer/debugger
     └── software                    # Software root directory
         ├── default blacklist           # List of URLs that will be blocked by default
@@ -61,4 +61,3 @@ Do you like the Esper hardware, but want to use it for something other than ad-b
         ├── scripts                     # Scripts used in build process and testing
         ├── tests                       # Scripts used in testing (not started yet)
         └── website                     # Hugo project used to generate website
-

@@ -1,6 +1,7 @@
 ## TODO:
 
 ### Version 0.1
+- Make LED blink when blocking
 - Run through tests
 - Set up Tindie
     - Packaging?
