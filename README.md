@@ -1,3 +1,9 @@
+# This Project has moved!
+
+It can now be [found here](https://github.com/openesper/esper).
+
+This repo is just kept so history is still available
+
 ![Imgur](https://i.imgur.com/srEjdoel.jpg)
 
 # About Esper
