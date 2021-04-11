@@ -20,6 +20,7 @@ static const char *TAG = "HTTP";
 
 static esp_err_t restart_post_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     xTimerHandle restartTimer = xTimerCreate("restart", pdMS_TO_TICKS(500), pdTRUE, (void*)0, (void *)esp_restart);
     xTimerStart(restartTimer, 0);
 
@@ -38,7 +39,7 @@ static httpd_uri_t restart_post = {
 
 static esp_err_t settings_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for settings.html");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
@@ -60,7 +61,7 @@ static httpd_uri_t settings_get = {
 
 static esp_err_t settings_json_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for settings.json");   
+    ESP_LOGI(TAG, "Request for %s", req->uri); 
     cJSON *json = cJSON_CreateObject();
     if ( json == NULL )
     {
@@ -118,7 +119,7 @@ static httpd_uri_t settings_json_get = {
 
 static esp_err_t settings_json_post_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "%d %s %d", req->method, req->uri, req->content_len);
+    ESP_LOGI(TAG, "Request for %s", req->uri);
 
     if ( req->content_len > (MAX_URL_LENGTH*2+CONFIG_HTTPD_MAX_URI_LEN+IP4ADDR_STRLEN_MAX*2+100) )
     {
@@ -209,7 +210,7 @@ static httpd_uri_t settings_json_post = {
 };
 
 static esp_err_t toggle_blocking_handler(httpd_req_t *req){
-    ESP_LOGI(TAG, "Request to toggle blocking");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
 
     if ( toggle_bit(BLOCKING_BIT) != ESP_OK )
     {
@@ -247,7 +248,7 @@ static httpd_uri_t set_blocking_status = {
 
 static esp_err_t updatefirmware_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for firmware update");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
 
     start_ota();
 
@@ -266,6 +267,7 @@ static httpd_uri_t update_firmware = {
 
 static esp_err_t ota_status_get_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     cJSON *json = cJSON_CreateObject();
     if ( json == NULL )
     {

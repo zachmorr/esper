@@ -12,10 +12,6 @@
 #define IP4_STRLEN_MAX 16
 #define HOSTNAME_STRLEN_MAX 255
 
-esp_err_t nvs_set(char* key, void* value, size_t length);
-esp_err_t nvs_get(char* key, void* value, size_t length);
-esp_err_t nvs_get_length(char* key, size_t* length);
-
 esp_err_t get_upstream_dns(char* str);
 esp_err_t set_upstream_dns(char* str);
 esp_err_t get_device_url(char* str);
@@ -28,6 +24,8 @@ esp_err_t set_network_info(esp_netif_ip_info_t info);
 esp_err_t get_enabled_interfaces(bool* eth, bool* wifi);
 esp_err_t get_ethernet_phy_config(uint32_t* phy, uint32_t* addr, uint32_t* rst, uint32_t* mdc, uint32_t* mdio);
 esp_err_t get_gpio_config(bool* enabled, int* button, int* red, int* green, int* blue);
+esp_err_t get_provisioning_status(bool* provisioned);
+esp_err_t set_provisioning_status(bool provisioned);
 
 esp_err_t get_log_data(uint16_t* head, bool* full);
 esp_err_t update_log_data(uint16_t head, bool full);

@@ -48,9 +48,6 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
             break;
         case IP_EVENT_STA_LOST_IP:
             ESP_LOGI(TAG, "IP_EVENT_STA_LOST_IP");
-            esp_wifi_connect();
-            // set_bit(DISCONNECTED_BIT);
-            // clear_bit(CONNECTED_BIT);
             break;
         case IP_EVENT_AP_STAIPASSIGNED:
             ESP_LOGI(TAG, "IP_EVENT_AP_STAIPASSIGNED");
@@ -80,15 +77,18 @@ esp_err_t initialize_interfaces()
     {
         ERROR_CHECK(init_wifi())
         ERROR_CHECK(init_wifi_sta_netif(&wifi_sta_netif))
+        ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
         ERROR_CHECK(esp_wifi_start())
 
-        wifi_config_t config = {0};
-        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &config))
-
-        if( strlen((const char*)config.ap.ssid) == 0 )
-            ERROR_CHECK(clear_bit(PROVISIONED_BIT))
-        else
+        // // Check provisioning status
+        // wifi_config_t config = {0};
+        // ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &config))
+        bool provisioned = false;
+        ERROR_CHECK(get_provisioning_status(&provisioned))
+        if( provisioned )
             ERROR_CHECK(set_bit(PROVISIONED_BIT))
+        else
+            ERROR_CHECK(clear_bit(PROVISIONED_BIT))
     }
     else
     {
@@ -154,7 +154,7 @@ esp_err_t start_interfaces()
     if( wifi_en )
     {
         ERROR_CHECK(set_static_ip(wifi_sta_netif))
-        ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
+        // ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
         ERROR_CHECK(esp_wifi_connect())
     }
 

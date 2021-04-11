@@ -71,15 +71,15 @@ static void button_task(void* args)
                 rollback_ota();
                 esp_restart();
             }
-            // else if (length > 200 )
-            // {
-            //     char buf[500];
-            //     //vTaskDelay(5000/ portTICK_PERIOD_MS);
-            //     ESP_LOGI("STATS", "Run Time Stats");
-            //     vTaskGetRunTimeStats(buf);
-            //     ESP_LOGI("STATS", "\n%s", buf);
-            //     ESP_LOGI("STATS", "\n\nFree Heap: %d", xPortGetFreeHeapSize());
-            // }
+            else if (length > 500 )
+            {
+                char buf[500];
+                //vTaskDelay(5000/ portTICK_PERIOD_MS);
+                ESP_LOGI("STATS", "Run Time Stats");
+                vTaskGetRunTimeStats(buf);
+                ESP_LOGI("STATS", "\n%s", buf);
+                ESP_LOGI("STATS", "\n\nFree Heap: %d", esp_get_minimum_free_heap_size());
+            }
             else
             {
                 toggle_bit(BLOCKING_BIT);

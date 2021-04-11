@@ -164,10 +164,10 @@ static IRAM_ATTR esp_err_t capture_query(Packet* packet)
     {
         esp_netif_ip_info_t info;
         get_network_info(&info);
-        ip = info.ip.addr;
+        ip = ntohl(info.ip.addr);
     }
 
-    return answer_query(packet, htonl(ip));
+    return answer_query(packet, ip);
 }
 
 static IRAM_ATTR esp_err_t block_query(Packet* packet)
@@ -247,12 +247,12 @@ static IRAM_ATTR void dns_t(void* paramerters)
             {
                 if( qtype == A || qtype == AAAA )
                 {
-                    ESP_LOGW(TAG, "Capturing DNS request %*s", url.length, url.string);
+                    ESP_LOGW(TAG, "Capturing %d query for %*s", qtype, url.length, url.string);
                     capture_query(packet);
                 }
                 else
                 {
-                    ESP_LOGW(TAG, "Blocking query for %*s", url.length, url.string);
+                    ESP_LOGW(TAG, "Blocking %d query for %*s", qtype, url.length, url.string);
                 }
             }
             else if( qtype == A || qtype == AAAA )
@@ -285,7 +285,7 @@ static IRAM_ATTR void dns_t(void* paramerters)
             
         }
         int64_t end = esp_timer_get_time();
-        ESP_LOGI(TAG, "Processing Time: %lld ms", (end-packet->recv_timestamp)/1000);
+        ESP_LOGD(TAG, "Processing Time: %lld ms", (end-packet->recv_timestamp)/1000);
     }
 }
 

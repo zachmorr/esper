@@ -40,6 +40,7 @@ esp_err_t initialize()
     ERROR_CHECK(initialize_interfaces())
     ERROR_CHECK(initialize_blocklists())
     ERROR_CHECK(initialize_logging())
+    ERROR_CHECK(start_dns())
     ERROR_CHECK(start_webserver())
     ERROR_CHECK(clear_bit(INITIALIZING_BIT))
 
@@ -68,7 +69,6 @@ esp_err_t start_application()
     ERROR_CHECK(wait_for(CONNECTED_BIT, portMAX_DELAY))
 
     ERROR_CHECK(initialize_sntp())
-    ERROR_CHECK(start_dns())
     ERROR_CHECK(start_update_checking_task())
     ERROR_CHECK(start_application_webserver())
 

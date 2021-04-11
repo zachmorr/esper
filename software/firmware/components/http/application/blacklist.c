@@ -10,7 +10,7 @@ static const char *TAG = "HTTP";
 
 static esp_err_t blacklist_json_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for blacklist.json");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     cJSON* json = cJSON_CreateObject();
@@ -39,7 +39,7 @@ static httpd_uri_t blacklist_json = {
 
 static esp_err_t blacklist_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for blacklist.html");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
@@ -61,7 +61,7 @@ static httpd_uri_t blacklist = {
 
 static esp_err_t blacklist_add_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request to add url to blacklist");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     if (req->content_len > MAX_URL_LENGTH + 11)
@@ -146,7 +146,7 @@ static httpd_uri_t blacklist_add = {
 
 static esp_err_t blacklist_delete_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request to remove url from blacklist");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     if (req->content_len > MAX_URL_LENGTH + 11)

@@ -17,43 +17,6 @@ static const char *TAG = "FLASH";
 
 static nvs_handle nvs;
 
-esp_err_t nvs_set(char* key, void* value, size_t length)
-{
-    esp_err_t ret = nvs_set_blob(nvs, key, value, length);
-    if (ret != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
-    }
-    return ret;
-}
-
-esp_err_t nvs_get_length(char* key, size_t* length)
-{
-    esp_err_t ret = nvs_get_blob(nvs, key, NULL, length);
-    if (ret != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
-        *length = 0;
-    }
-    return ret;
-}
-
-esp_err_t nvs_get(char* key, void* value, size_t length)
-{
-    if (length < 1)
-    {
-        nvs_get_length(key, &length);
-    }
-
-    esp_err_t ret = nvs_get_blob(nvs, key, value, &length);
-    if (ret != ESP_OK) 
-    {
-        ESP_LOGE(TAG, "%s %s", key, esp_err_to_name(ret));
-        *((uint8_t*)value) = 0;
-    }
-    return ret;
-}
-
 esp_err_t get_upstream_dns(char* str)
 {
     size_t length = IP4ADDR_STRLEN_MAX;
@@ -161,6 +124,18 @@ esp_err_t get_gpio_config(bool* enabled, int* button, int* red, int* green, int*
     return ESP_OK;
 }
 
+esp_err_t get_provisioning_status(bool* provisioned)
+{
+    ERROR_CHECK(nvs_get_u8(nvs, "provisioned", (uint8_t*)provisioned))
+    return ESP_OK;
+}
+
+esp_err_t set_provisioning_status(bool provisioned)
+{
+    ERROR_CHECK(nvs_set_u8(nvs, "provisioned", (uint8_t)provisioned))
+    return ESP_OK;
+}
+
 static esp_err_t init_settings()
 {
     ESP_LOGI(TAG, "Saving Settings");
@@ -214,6 +189,7 @@ static esp_err_t init_interfaces()
     // Initialize network info to 0
     esp_netif_ip_info_t info = {0};
     ERROR_CHECK(set_network_info(info))
+    ERROR_CHECK(nvs_set_u8(nvs, "provisioned", false))
 
     return ESP_OK;
 }
@@ -255,7 +231,7 @@ static esp_err_t first_power_on()
 esp_err_t reset_device()
 {
     ESP_LOGI(TAG, "Resetting Device");
-    ERROR_CHECK(nvs_set_u8(nvs, "initialized", (uint8_t)false))
+    ERROR_CHECK(nvs_set_u8(nvs, "provisioned", (uint8_t)false))
     return ESP_OK;
 }
 

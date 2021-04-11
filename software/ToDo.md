@@ -49,5 +49,9 @@
 - DNS Over HTTPS (early tests dont look hopeful for ESP32, will likely need MPU)
 
 ## Known Bugs:
+- Logging breaks under high bandwidth (~25 queries per second)
+- Throws "emac_esp32: no mem for receive buffer" at high bandwidth 
+- Does not respond to queries with 'Additional Sections' (aka dig) correctly
+- Does not repond to reverse lookups correctly
 - Have to reset device if network ssid/pass change
 - black/whitelist buttons on homepage do not update after being added 

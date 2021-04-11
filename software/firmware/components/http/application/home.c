@@ -78,7 +78,7 @@ static httpd_uri_t log_json = {
 
 static esp_err_t homepage_get_handler(httpd_req_t *req)
 {
-    ESP_LOGI(TAG, "Request for homepage.html");
+    ESP_LOGI(TAG, "Request for %s", req->uri);
     long start = esp_timer_get_time();
 
     httpd_resp_set_type(req, "text/html; charset=UTF-8");
