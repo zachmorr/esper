@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name EsperDNS-rescue)(type Legacy)(uri ${KIPRJMOD}/EsperDNS-rescue.lib)(options "")(descr ""))
-)

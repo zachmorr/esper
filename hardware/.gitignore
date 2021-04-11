@@ -1,4 +1,5 @@
-*.gbr
-*.drl
-*.zip
 *.gcode
+_autosave*
+*-bak
+*-cache.lib
+*-rescue.*

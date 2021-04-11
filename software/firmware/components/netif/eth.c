@@ -55,10 +55,12 @@ esp_err_t init_eth_netif(esp_netif_t** eth_netif)
 
 esp_err_t init_eth_handle(esp_eth_handle_t* eth_handle)
 {
+    // Get hardware configuration from flash
     esp_eth_phy_t* phy;
     uint32_t phy_id = 0, addr = 0, rst = 0, mdc = 0, mdio = 0;
     get_ethernet_phy_config(&phy_id, &addr, &rst, &mdc, &mdio);
     
+    // Setup phy configuration
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
     phy_config.phy_addr = addr;
     phy_config.reset_gpio_num = rst;
@@ -82,6 +84,7 @@ esp_err_t init_eth_handle(esp_eth_handle_t* eth_handle)
     }
     NULL_CHECK(phy)
 
+    // Setup MAC configuration
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
     mac_config.smi_mdc_gpio_num = mdc;
     mac_config.smi_mdio_gpio_num = mdio;
@@ -99,7 +102,6 @@ esp_err_t init_eth()
 {
     ESP_LOGI(TAG, "Initializing Ethernet...");
     ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &eth_event_handler, NULL))
-    // ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
 
     return ESP_OK;
 }

@@ -15,6 +15,8 @@
 #include "esp_log.h"
 static const char *TAG = "GPIO";
 
+// Define common colors
+
 #define PURPLE      148,0,211
 #define BLUE        0,0,255
 #define WEAK_BLUE   0,0,60
@@ -22,41 +24,43 @@ static const char *TAG = "GPIO";
 #define RED         255,0,0
 #define YELLOW      255,255,0
 
-#define LED_SPEED_MODE LEDC_LOW_SPEED_MODE
-#define MAX_DUTY_CYCLE 1023
-#define FADE_TIME 1000
+#define LED_SPEED_MODE LEDC_LOW_SPEED_MODE      // LED PWM speed mode
+#define MAX_DUTY_CYCLE 1023                     // Duty cycle, picked 1023 so 0-255 values can be used for color 
+#define FADE_TIME 1000                          // Fade time of 1 second
 
-#define RED_LED_CHANNEL LEDC_CHANNEL_0
-#define GREEN_LED_CHANNEL LEDC_CHANNEL_1
-#define BLUE_LED_CHANNEL LEDC_CHANNEL_2
+#define RED_LED_CHANNEL LEDC_CHANNEL_0          // Red LED Channel
+#define GREEN_LED_CHANNEL LEDC_CHANNEL_1        // Green LED Channel
+#define BLUE_LED_CHANNEL LEDC_CHANNEL_2         // Blue LED Channel
 
-static bool gpio_enabled = true;
-static int button = -1;
-static int red_led = -1;
-static int green_led = -1;
-static int blue_led = -1;
+static bool gpio_enabled = true;                // GPIO enabled status
+static int button = -1;                         // Button GPIO
+static int red_led = -1;                        // Red LED GPIO
+static int green_led = -1;                      // Green LED GPIO
+static int blue_led = -1;                       // Blue LED GPIO
 
-static TaskHandle_t button_task_handle;
-static TaskHandle_t led_task_handle;
+static TaskHandle_t button_task_handle;         // Task handle for button listening task
+static TaskHandle_t led_task_handle;            // Task handle for LED task
 
-static void button_state_change(void* arg)
+static void button_state_change(void* arg)      // Button interrupt handler 
 {
     xTaskNotifyFromISR(button_task_handle, 0, eNoAction, NULL);
 }
 
-static void button_task(void* args)
+static void button_task(void* args)             // Task keeping track of time between button presses
 {
     uint32_t press_timestamp = 0xFFFFFFFF;
     uint32_t length = 0;
+
     while(1)
     {
         xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
         ESP_LOGD(TAG, "Reset Pin intr, val: %d\n", gpio_get_level(button));
-        if(gpio_get_level(button) == 0)
+
+        if(gpio_get_level(button) == 0) // Button is pressed down
         {
             press_timestamp = esp_log_timestamp();
         }
-        else
+        else    // Button is released
         {
             length = esp_log_timestamp() - press_timestamp;
             if( length > 5000 )
@@ -70,15 +74,6 @@ static void button_task(void* args)
                 ESP_LOGW(TAG, "Rolling back");
                 rollback_ota();
                 esp_restart();
-            }
-            else if (length > 500 )
-            {
-                char buf[500];
-                //vTaskDelay(5000/ portTICK_PERIOD_MS);
-                ESP_LOGI("STATS", "Run Time Stats");
-                vTaskGetRunTimeStats(buf);
-                ESP_LOGI("STATS", "\n%s", buf);
-                ESP_LOGI("STATS", "\n\nFree Heap: %d", esp_get_minimum_free_heap_size());
             }
             else
             {
@@ -138,7 +133,8 @@ static void led_task(void* args)
         {
             set_rgb(BLUE);
         }
-        else {
+        else 
+        {
             set_rgb(WEAK_BLUE);
         }
     }
@@ -151,6 +147,7 @@ esp_err_t initialize_gpio()
     if( !gpio_enabled )
         return ESP_OK;
 
+    // Set button settings and assign interrupt handler
     gpio_pad_select_gpio(button);
     gpio_set_direction(button, GPIO_MODE_DEF_INPUT);
     gpio_set_pull_mode(button, GPIO_PULLUP_ONLY);
@@ -158,6 +155,7 @@ esp_err_t initialize_gpio()
     gpio_install_isr_service(0);
     gpio_isr_handler_add(button, button_state_change, NULL);
 
+    // Set up LED PWM timer configs 
     ledc_timer_config_t led_timer_config = {
         .speed_mode = LED_SPEED_MODE,
         .timer_num = LEDC_TIMER_0,
@@ -166,6 +164,7 @@ esp_err_t initialize_gpio()
     };
     ledc_timer_config(&led_timer_config);
 
+    // Set up LED PWM channel configs 
     ledc_channel_config_t led_channel_config_blue = {
         .gpio_num = blue_led,
         .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -199,7 +198,8 @@ esp_err_t initialize_gpio()
     set_rgb(0,0,0);
 
     xTaskCreatePinnedToCore(button_task, "button_task", 3000, NULL, 2, &button_task_handle, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(led_task, "led_task", 3000, NULL, 2, &led_task_handle, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(led_task, "led_task", 2000, NULL, 2, &led_task_handle, tskNO_AFFINITY);
+    
     ESP_LOGI(TAG, "GPIO Initialized");
     return ESP_OK;
 }

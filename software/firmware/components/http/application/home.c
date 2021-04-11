@@ -1,15 +1,14 @@
 #include "home.h"
 #include "error.h"
 #include "logging.h"
-// #include "datetime.h"
-// #include "lwip/inet.h"
-// #include "cJSON.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
 static const char *TAG = "HTTP";
 
-
+/**
+  * @brief Response to log.json GET request
+  */
 static esp_err_t log_json_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for %s", req->uri);
@@ -52,6 +51,7 @@ static esp_err_t log_json_get_handler(httpd_req_t *req)
             size = 50;
     }
 
+    // build log json
     cJSON* json = cJSON_CreateObject();
     if( build_log_json(json, size, page) != ESP_OK)
     {
@@ -76,6 +76,9 @@ static httpd_uri_t log_json = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Response for homepage GET request
+  */
 static esp_err_t homepage_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Request for %s", req->uri);
@@ -105,6 +108,9 @@ static httpd_uri_t homepage = {
     .user_ctx  = ""
 };
 
+/**
+  * @brief Setup all handlers needed for homepage
+  */
 esp_err_t setup_homepage_handlers(httpd_handle_t server)
 {
     ERROR_CHECK(httpd_register_uri_handler(server, &root))
@@ -114,6 +120,9 @@ esp_err_t setup_homepage_handlers(httpd_handle_t server)
     return ESP_OK;
 }
 
+/**
+  * @brief Teardown all homepage handlers
+  */
 esp_err_t teardown_homepage_handlers(httpd_handle_t server)
 {
     ERROR_CHECK(httpd_unregister_uri_handler(server, root.uri, root.method))

@@ -10,11 +10,6 @@
 #include "esp_log.h"
 static const char *TAG = "WIFI";
 
-// EventGroupHandle_t ip_event_group;
-// const int SCAN_FINISHED = BIT0;
-// const int DISCONNECTED = BIT1;
-// const int CONNECTED = BIT2;
-
 static wifi_ap_record_t ap_list[MAX_SCAN_RECORDS];
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
@@ -113,7 +108,6 @@ esp_err_t init_wifi_sta_netif(esp_netif_t** sta_netif)
     
     ERROR_CHECK(esp_netif_attach_wifi_station(*sta_netif))
     ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers())
-    // ERROR_CHECK(update_sta_config())
     return ESP_OK;
 }
 
@@ -180,7 +174,8 @@ esp_err_t wifi_scan()
 
 wifi_ap_record_t* scan_results(){
     wait_for(SCAN_FINISHED_BIT, portMAX_DELAY);
-    return ap_list;
+    // results of scan are stored in event loop
+    return ap_list; 
 }
 
 esp_err_t attempt_to_connect(bool* result)

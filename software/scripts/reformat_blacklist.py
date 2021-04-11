@@ -1,7 +1,9 @@
 import os
+import sys
 
-outputFile = r'firmware/components/url/default_blacklist.txt'
-inputFile = r'DefaultBlacklist/blacklist.txt'
+script_dir, script_path = os.path.split(os.path.abspath(sys.argv[0]))
+outputFile = script_dir + r'/../firmware/components/url/default_blacklist.txt'
+inputFile = script_dir + r'/../defaultBlacklist/blacklist.txt'
 
 with open(inputFile, 'rb') as input:
     with open(outputFile, 'wb') as output:

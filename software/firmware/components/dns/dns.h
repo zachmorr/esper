@@ -11,6 +11,13 @@
 #define A_RECORD_ANSWER_SIZE 16
 #define AAAA_RECORD_ANSWER_SIZE 28
 
+/**
+  * @brief structs and enums used to parse DNS packets
+  * 
+  * Documentation: https://www2.cs.duke.edu/courses/fall16/compsci356/DNS/DNS-primer.pdf
+  * 
+  */
+
 enum QRFlag {
     QUERY,
     ANSWER
@@ -21,6 +28,28 @@ enum RecordTypes {
     NS=2,
     AAAA=28,
 };
+
+
+/**
+  * @brief DNS Header
+  * 
+  *                                 1  1  1  1  1  1
+  *   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                     ID                        |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |QR| Opcode |AA|TC|RD|RA| Z      |    RCODE     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   QDCOUNT                     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   ANCOUNT                     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   NSCOUNT                     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   ARCOUNT                     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * 
+  */
 
 typedef struct{
     uint16_t id; // identification number
@@ -43,10 +72,53 @@ typedef struct{
     uint16_t add_count; // number of resource entries
 } DNS_Header;
 
+/**
+  * @brief DNS Query
+  * 
+  *                                 1  1  1  1  1  1
+  *   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                                               |
+  * /                   QNAME                       /
+  * /                                               /
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   NSCOUNT                     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   ARCOUNT                     |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * 
+  */
+ 
 typedef struct{
     uint16_t qtype;
     uint16_t qclass;
-} DNS_Query;
+} DNS_Query; 
+
+
+/**
+  * @brief DNS Answer
+  * 
+  *                                 1  1  1  1  1  1
+  *   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                                               |
+  * /                   Name                        /
+  * /                                               /
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   TYPE                        |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   CLASS                       |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   TTL                         |
+  * |                                               |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * |                   RDLENGTH                    |
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * /                   QNAME                       /
+  * /                                               /
+  * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  * 
+  */
 
 typedef struct __attribute__((__packed__)){
     uint16_t name; // Name can be a 16bit pointer to qname
@@ -77,10 +149,35 @@ typedef struct {
     int64_t response_latency;
 } Client;
 
-
+/**
+  * @brief Retreive upstream dns server from flash
+  * 
+  * Stores the current server into static sockaddr_in struct
+  *
+  * @return
+  *    - ESP_OK Success
+  *    - ESP_FAIL unable to get server ip from flash
+  */
 esp_err_t load_upstream_dns();
+
+/**
+  * @brief Start listening and DNS parsing tasks
+  *
+  * @return
+  *    - ESP_OK Success
+  *    - ESP_FAIL unable to start tasks
+  */
 esp_err_t start_dns();
-IRAM_ATTR uint8_t parse_query(Packet* packet, DNS_Query* query);
+
+/**
+  * @brief Retreive device url from flash
+  * 
+  * Stores the current url in static char buffer
+  *
+  * @return
+  *    - ESP_OK Success
+  *    - ESP_FAIL unable to get url from flash
+  */
 esp_err_t load_device_url();
 
 #endif

@@ -39,6 +39,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
             ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");
             set_bit(CONNECTED_BIT);
 
+            // Save IP if in provisioning mode
             if( check_bit(PROVISIONING_BIT) )
             {
                 ESP_LOGI(TAG, "Saving IP");
@@ -48,9 +49,15 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
             break;
         case IP_EVENT_STA_LOST_IP:
             ESP_LOGI(TAG, "IP_EVENT_STA_LOST_IP");
+
+            // This event only gets called then wifi is started
+            // I'm 90% sure this won't cause a problem with ethernet
+            esp_wifi_connect();
+
             break;
         case IP_EVENT_AP_STAIPASSIGNED:
             ESP_LOGI(TAG, "IP_EVENT_AP_STAIPASSIGNED");
+            // New device connected to accesspoint
             break;
         default:
             break;
@@ -60,10 +67,13 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
 esp_err_t initialize_interfaces()
 {
     ESP_LOGI(TAG, "Initializing Interfaces");
+
+    // Initialize TCP/IP stack
     esp_netif_init();
     esp_event_loop_create_default();
     ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL))
 
+    // Turn on available interfaces
     ERROR_CHECK(get_enabled_interfaces(&eth_en, &wifi_en))
     if( eth_en )
     {
@@ -80,18 +90,29 @@ esp_err_t initialize_interfaces()
         ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
         ERROR_CHECK(esp_wifi_start())
 
+<<<<<<< HEAD
         // // Check provisioning status
         // wifi_config_t config = {0};
         // ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &config))
         bool provisioned = false;
         ERROR_CHECK(get_provisioning_status(&provisioned))
         if( provisioned )
+=======
+        wifi_config_t config = {0};
+        ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &config))
+
+        // Check provioning status
+        if( strlen((const char*)config.ap.ssid) == 0 )
+            ERROR_CHECK(clear_bit(PROVISIONED_BIT))
+        else
+>>>>>>> fbfe194a81aea4f7f4cab8a810540e05b74f56a4
             ERROR_CHECK(set_bit(PROVISIONED_BIT))
         else
             ERROR_CHECK(clear_bit(PROVISIONED_BIT))
     }
     else
     {
+        // Set provisioning status if wifi is disabled
         ERROR_CHECK(set_bit(PROVISIONED_BIT))
     }
 
@@ -116,7 +137,7 @@ esp_err_t turn_off_accesspoint()
 
 esp_err_t set_static_ip(esp_netif_t* interface)
 {
-    
+    // Get network info from flash
     esp_netif_ip_info_t ip_info;
     ERROR_CHECK(get_network_info(&ip_info))
 
@@ -129,7 +150,7 @@ esp_err_t set_static_ip(esp_netif_t* interface)
         ESP_LOGI(TAG, "Assigned static IP to interface");
     }
 
-    // Set main DNS provider, used to connected to SNTP server
+    // Set main DNS for interface, used to connected to SNTP server
     esp_netif_dns_info_t dns = {0};
     char upstream_server[IP4ADDR_STRLEN_MAX];
     ERROR_CHECK(get_upstream_dns(upstream_server))

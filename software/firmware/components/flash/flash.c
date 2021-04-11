@@ -156,6 +156,7 @@ static esp_err_t init_settings()
 static esp_err_t init_interfaces()
 {
     ESP_LOGI(TAG, "Saving Interface Configuration");
+    
 #ifdef CONFIG_ETHERNET_ENABLE
     ERROR_CHECK(nvs_set_u8(nvs, "ethernet", true))
     ERROR_CHECK(nvs_set_u32(nvs, "phy_addr", CONFIG_ETH_PHY_ADDR))

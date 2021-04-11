@@ -1,17 +1,40 @@
 ## TODO:
+
+### Version 0.1
+- Make LED blink when blocking
+- Run through tests
+- Set up Tindie
+    - Packaging?
+- How to use guide
+- Basic site at openesper.com
+- Push to official repo
+
 ### Tests:
 - Start writing test doc
-### Settings
+- Start incorporating unit testing
+### Build
+- Add Arduino support
+### Web
+- Password authentication
+- Respond to POST requests with current results
+- Analytics
+    - Total queries and total blocked queries
+    - most blocked/queried websites
+- show currently connected network & ip
+- show connected clients
+- Add log page select to homepage 
+- Upload/download blacklist files
 - advanced settings fold
-### Debugging page
+### Debugging
+- Add debug page to website
+- Add errors to error log
 - remaining memory
     - total and for each task
-- Error logs
-- clear logs
 ### OTA Updates
 - progress bar
 ### DATETIME
 - Add timezone select
+- Connect to SNTP in background, non-blocking
 ### CONFIGURATION
 - Look into wifi_provisioning library
 ### DNS
@@ -22,14 +45,6 @@
 - Benchmark DNS response times
 ### LEDs
 - LED Error Codes
-### WEBSITE
-- Analytics
-    - Total queries and total blocked queries
-    - most blocked/queried websites
-- show currently connected network & ip
-- show connected clients
-- Add log page select to homepage 
-- Upload/download blacklist files
 ### BLACKLIST
 - more error handling errors
 - Benchmark speed improvement from keeping blacklist in RAM instead of flash
@@ -37,10 +52,6 @@
 - figure out way to emulate flash wear out & error handling
 - Handle flash errors
 - Document what is being held in flash
-### OTHER
-- Document/Refactor Code
-- Prevent buffer overflows
-- Move away from strcpy, strcmp, etc
 
 ## Maybe Some Day:
 - DHCP support
